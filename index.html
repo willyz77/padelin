@@ -112,8 +112,11 @@ function el(tag,attrs,...kids){
     if(k==='cls')e.className=v
     else if(k.startsWith('on'))e.addEventListener(k.slice(2).toLowerCase(),v)
     else if(k==='style'&&typeof v==='object')Object.assign(e.style,v)
-    // FIX PENTING: property boolean diproses langsung jadi browser tidak bingung
-    else if(typeof v==='boolean') e[k]=v 
+    // FIX PENTING 2.0: Menggunakan metode paling standar agar tidak blank
+    else if(typeof v==='boolean') {
+      if(v) e.setAttribute(k,'')
+      else e.removeAttribute(k)
+    }
     else e.setAttribute(k,v)
   }
   for(const c of kids.flat(99)){
@@ -433,4 +436,280 @@ function vMatchCard(match){
   const ca=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px'}})
   const cb=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px'}})
   match.teamA.forEach(id=>ca.appendChild(el('div',{cls:'team-chip'},pn(S.players,id))))
-  match.teamB.forEach(id=>cb.
+  match.teamB.forEach(id=>cb.appendChild(el('div',{cls:'team-chip b'},pn(S.players,id))))
+  teams.append(ca,el('div',{cls:'fd',style:{fontSize:'20px',color:'var(--muted)',textAlign:'center'}},'VS'),cb)
+  card.appendChild(teams)
+  const sw=el('div',{style:{borderTop:'1px solid var(--border)',paddingTop:'16px'}})
+  sw.appendChild(vScoreInput(match));card.appendChild(sw)
+  return card
+}
+
+function vScoreInput(match){
+  const inp=S.inputs[match.id]||{scoreA:'',sets:[]}
+  if(S.scoreMode==='tennis'){
+    const wrap=el('div',{style:{display:'flex',flexDirection:'column',gap:'12px'}})
+    if(inp.sets&&inp.sets.length>0){
+      const sw=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px'}})
+      inp.sets.forEach((s,i)=>{
+        const row=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface-3)',borderRadius:'12px',padding:'10px 14px'}})
+        const sc=el('span',{cls:'fd',style:{fontSize:'24px'}})
+        sc.appendChild(el('span',{style:{color:s.a>s.b?'var(--blue)':'var(--muted)'}},String(s.a)))
+        sc.appendChild(document.createTextNode(' — '))
+        sc.appendChild(el('span',{style:{color:s.b>s.a?'var(--blue)':'var(--muted)'}},String(s.b)))
+        const del=el('button',{cls:'btn btn-ghost btn-sm',style:{padding:'4px'},onClick:()=>{
+          if(!S.inputs[match.id])S.inputs[match.id]={scoreA:'',sets:[]}
+          S.inputs[match.id].sets=inp.sets.filter((_,j)=>j!==i);render()
+        }},svg('x',14))
+        row.append(sc,el('span',{style:{fontSize:'11px',color:'var(--muted)'}},`Set ${i+1}`),del)
+        sw.appendChild(row)
+      })
+      const sA=inp.sets.filter(s=>s.a>s.b).length,sB=inp.sets.filter(s=>s.b>s.a).length
+      const sr=el('p',{style:{textAlign:'center',fontSize:'12px',color:'var(--muted)'}})
+      sr.append(el('span',{style:{color:'var(--blue)',fontWeight:'700'}},String(sA)),' – ',el('span',{style:{color:'var(--yellow)',fontWeight:'700'}},String(sB)),' sets')
+      sw.appendChild(sr);wrap.appendChild(sw)
+    }
+    let tA='',tB=''
+    const iA=el('input',{type:'number',cls:'ti',style:{width:'64px',textAlign:'center',fontSize:'22px',fontFamily:"'Bebas Neue',sans-serif",padding:'8px'},placeholder:'A',min:'0',max:'7',onInput:e=>tA=e.target.value})
+    const iB=el('input',{type:'number',cls:'ti',style:{width:'64px',textAlign:'center',fontSize:'22px',fontFamily:"'Bebas Neue',sans-serif",padding:'8px'},placeholder:'B',min:'0',max:'7',onInput:e=>tB=e.target.value})
+    const addBtn=el('button',{cls:'btn btn-sec btn-sm',onClick:()=>{
+      const a=parseInt(iA.value,10),b=parseInt(iB.value,10)
+      if(!isNaN(a)&&!isNaN(b)&&a>=0&&b>=0){
+        if(!S.inputs[match.id])S.inputs[match.id]={scoreA:'',sets:[]}
+        S.inputs[match.id].sets=[...(S.inputs[match.id].sets||[]),{a,b}];render()
+      }
+    }},svg('plus',14),'Add Set')
+    wrap.appendChild(el('div',{style:{display:'flex',alignItems:'center',gap:'8px',justifyContent:'center'}},iA,el('span',{style:{color:'var(--muted)'}},'–'),iB,addBtn))
+    return wrap
+  }
+  const max=S.scoreMode==='total16'?16:21
+  // both scoreA and scoreB are stored; they're independent but each capped by (max - other)
+  const initA=inp.scoreA??'', initB=inp.scoreB??''
+
+  function clampScore(val, otherVal, maximum){
+    if(isNaN(val)) return ''
+    const other = parseInt(otherVal, 10)
+    const otherNum = isNaN(other) ? 0 : other
+    return String(Math.max(0, Math.min(maximum - otherNum, val)))
+  }
+
+  const wrap=el('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:'12px'}})
+  const row=el('div',{style:{display:'flex',alignItems:'center',gap:'16px'}})
+
+  const inpA=el('input',{type:'number',cls:'score-in',placeholder:'0',min:'0',max:String(max),value:initA,
+    onInput:e=>{
+      let v=parseInt(e.target.value,10)
+      if(isNaN(v)){e.target.value='';if(!S.inputs[match.id])S.inputs[match.id]={scoreA:'',scoreB:'',sets:[]};S.inputs[match.id].scoreA='';return}
+      const curB=parseInt(S.inputs[match.id]?.scoreB||'0',10)||0
+      v=Math.max(0,Math.min(max-curB,v))
+      e.target.value=String(v)
+      if(!S.inputs[match.id])S.inputs[match.id]={scoreA:'',scoreB:'',sets:[]}
+      S.inputs[match.id].scoreA=String(v)
+    }
+  })
+  const inpB=el('input',{type:'number',cls:'score-in team-b',placeholder:'0',min:'0',max:String(max),value:initB,
+    onInput:e=>{
+      let v=parseInt(e.target.value,10)
+      if(isNaN(v)){e.target.value='';if(!S.inputs[match.id])S.inputs[match.id]={scoreA:'',scoreB:'',sets:[]};S.inputs[match.id].scoreB='';return}
+      const curA=parseInt(S.inputs[match.id]?.scoreA||'0',10)||0
+      v=Math.max(0,Math.min(max-curA,v))
+      e.target.value=String(v)
+      if(!S.inputs[match.id])S.inputs[match.id]={scoreA:'',scoreB:'',sets:[]}
+      S.inputs[match.id].scoreB=String(v)
+    }
+  })
+
+  const colA=el('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:'6px'}},
+    el('span',{style:{fontSize:'11px',fontWeight:'600',color:'var(--blue)',textTransform:'uppercase',letterSpacing:'.5px'}},'Team A'),
+    inpA
+  )
+  const colB=el('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:'6px'}},
+    el('span',{style:{fontSize:'11px',fontWeight:'600',color:'var(--yellow)',textTransform:'uppercase',letterSpacing:'.5px'}},'Team B'),
+    inpB
+  )
+  row.append(colA,el('div',{cls:'fd',style:{fontSize:'22px',color:'var(--muted)',paddingTop:'24px'}},'vs'),colB)
+  wrap.append(row,el('p',{style:{fontSize:'11px',color:'var(--muted)'}},`Max total: ${max} pts · Both teams enter their own score`))
+  return wrap
+}
+
+function vStandings(hlIds=[]){
+  const card=el('div',{cls:'card'})
+  const tr=el('div',{style:{display:'flex',alignItems:'center',gap:'8px',marginBottom:'12px'}})
+  const si=svg('shield',16);si.style.color='var(--blue)'
+  tr.append(si,el('h3',{cls:'fd',style:{fontSize:'22px'}},'Standings'),badge(`${S.done.length} played`,'muted'))
+  card.appendChild(tr)
+  const r=ranked(S.players)
+  const tbl=el('table',{cls:'st'})
+  tbl.appendChild(el('thead',{},el('tr',{},
+    el('th',{},'#'),el('th',{},'Player'),
+    el('th',{style:{textAlign:'center'}},'GP'),el('th',{style:{textAlign:'center'}},'W'),
+    el('th',{style:{textAlign:'center'}},'D'),el('th',{style:{textAlign:'center'}},'L'),
+    el('th',{style:{textAlign:'center'}},'Pts'),el('th',{style:{textAlign:'center'}},'Diff')
+  )))
+  const tb=el('tbody')
+  r.forEach((p,i)=>{
+    const hl=hlIds.includes(p.id),diff=p.points-p.pointsAgainst
+    const row=el('tr',{style:{background:hl?'rgba(59,130,246,.06)':''}})
+    const rankEl=i===0?(()=>{const c=svg('crown',14);c.style.color='var(--yellow)';return c})():el('span',{style:{color:'var(--muted)'}},(i+1).toString())
+    row.append(
+      el('td',{},rankEl),
+      el('td',{style:{fontWeight:'600',color:hl?'var(--blue)':'',maxWidth:'120px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.name),
+      el('td',{style:{textAlign:'center',color:'var(--muted)'}},String(p.gamesPlayed)),
+      el('td',{style:{textAlign:'center',fontWeight:'700',color:'var(--blue)'}},String(p.wins)),
+      el('td',{style:{textAlign:'center',color:'var(--muted)'}},String(p.draws)),
+      el('td',{style:{textAlign:'center',color:'var(--red)'}},String(p.losses)),
+      el('td',{style:{textAlign:'center',fontWeight:'700'}},String(p.points)),
+      el('td',{style:{textAlign:'center',fontWeight:'600',color:diff>0?'var(--blue)':diff<0?'var(--red)':'var(--muted)'}},`${diff>0?'+':''}${diff}`)
+    )
+    tb.appendChild(row)
+  })
+  tbl.appendChild(tb);card.appendChild(tbl);return card
+}
+
+function vHistory(){
+  const card=el('div',{cls:'card'})
+  const tr=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'},onClick:()=>{S.showHist=!S.showHist;render()}})
+  const hl=el('div',{style:{display:'flex',alignItems:'center',gap:'8px'}})
+  const hi=svg('hist',16);hi.style.color='var(--muted)'
+  hl.append(hi,el('h3',{cls:'fd',style:{fontSize:'22px'}},'Match History'),badge(String(S.done.length),'muted'))
+  const chev=svg('cd',16);chev.style.color='var(--muted)';if(!S.showHist)chev.style.transform='rotate(-90deg)'
+  tr.append(hl,chev);card.appendChild(tr)
+  if(S.showHist){
+    const lw=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px',marginTop:'12px'}})
+    if(!S.done.length)lw.appendChild(el('p',{style:{fontSize:'13px',color:'var(--muted)',textAlign:'center',padding:'12px 0'}},'No matches yet.'))
+    else[...S.done].reverse().forEach(m=>lw.appendChild(vHistItem(m)))
+    card.appendChild(lw)
+  }
+  return card
+}
+
+function vHistItem(m){
+  const nA=m.teamA.map(id=>pn(S.players,id)).join(' / ')
+  const nB=m.teamB.map(id=>pn(S.players,id)).join(' / ')
+  let sc='',winA=false
+  if(S.scoreMode==='tennis'){sc=m.sets.map(s=>`${s.a}-${s.b}`).join(', ');winA=m.sets.filter(s=>s.a>s.b).length>m.sets.filter(s=>s.b>s.a).length}
+  else{sc=`${m.scoreA??'-'} : ${m.scoreB??'-'}`;winA=(m.scoreA??0)>(m.scoreB??0)}
+  const item=el('div',{cls:'hi'})
+  item.append(
+    el('span',{cls:'fd',style:{minWidth:'40px',textAlign:'center',fontSize:'14px',color:'var(--muted)'}},`R${m.roundNumber}C${m.courtNumber}`),
+    el('div',{style:{flex:'1',minWidth:'0'}},el('span',{style:{display:'block',fontWeight:'600',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:winA?'var(--blue)':'var(--muted)'}},nA)),
+    el('span',{cls:'fd',style:{fontSize:'18px',padding:'0 6px'}},sc),
+    el('div',{style:{flex:'1',minWidth:'0',textAlign:'right'}},el('span',{style:{display:'block',fontWeight:'600',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:!winA?'var(--blue)':'var(--muted)'}},nB))
+  )
+  return item
+}
+
+function vEditModal(){
+  const bg=el('div',{cls:'modal-bg',onClick:e=>{if(e.target===bg){S.editing=false;render()}}})
+  const card=el('div',{cls:'card',style:{maxWidth:'400px',width:'100%'}})
+  const tr=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'12px'}})
+  const xb=el('button',{cls:'btn btn-ghost btn-sm',style:{padding:'4px'},onClick:()=>{S.editing=false;render()}},svg('x',18))
+  tr.append(el('h3',{cls:'fd',style:{fontSize:'22px'}},'Edit Player Names'),xb)
+  card.appendChild(tr)
+  const edits=S.players.map(p=>({id:p.id,name:p.name}))
+  const lw=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px',maxHeight:'60vh',overflowY:'auto',paddingRight:'4px'}})
+  edits.forEach((p,i)=>{
+    lw.appendChild(el('input',{cls:'ti w-full',type:'text',value:p.name,placeholder:`Player ${i+1}`,onInput:e=>{edits[i].name=e.target.value}}))
+  })
+  card.appendChild(lw)
+  card.appendChild(el('button',{cls:'btn btn-primary w-full btn-md',style:{marginTop:'16px'},onClick:()=>{
+    S.players=S.players.map(p=>{const u=edits.find(x=>x.id===p.id);return u?{...p,name:u.name.trim()||p.name}:p})
+    S.editing=false;render()
+  }},svg('check',14),'Save Names'))
+  bg.appendChild(card);return bg
+}
+
+// ─ FINISHED ──────────────────────────────────────────────────────────────────
+function vFinished(){
+  const r=ranked(S.players),w=r[0]
+  let showAll=false
+  const wrap=el('div',{style:{minHeight:'100vh',display:'flex',flexDirection:'column'}})
+
+  // hero
+  const hero=el('div',{style:{textAlign:'center',padding:'48px 16px 32px',background:'linear-gradient(to bottom,rgba(59,130,246,.05),transparent)'}})
+  const ring=el('div',{cls:'winner-ring'});const ci=svg('crown',36);ci.style.color='var(--yellow)';ring.appendChild(ci)
+  hero.append(ring,badge('Tournament Complete','yellow'),el('h1',{cls:'fd',style:{fontSize:'clamp(40px,10vw,72px)',lineHeight:'1',marginTop:'12px'}},w?.name||''),
+    el('p',{style:{fontSize:'15px',color:'var(--muted)',marginTop:'8px'}},`${w?.wins} wins · ${w?.points} points · ${S.done.length} matches`),
+    (()=>{const row=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',marginTop:'12px',flexWrap:'wrap'}});row.append(badge(S.mode,'blue'),badge(S.scoreMode==='tennis'?'Tennis':S.scoreMode==='total16'?'Total 16':'Total 21','muted'),badge(`${S.players.length} players`,'muted'));return row})()
+  )
+  wrap.appendChild(hero)
+
+  const main=el('div',{style:{padding:'16px',maxWidth:'512px',margin:'0 auto',width:'100%',paddingBottom:'48px',display:'flex',flexDirection:'column',gap:'16px'}})
+
+  // podium
+  if(r.length>=3){
+    const pod=el('div',{style:{display:'flex',alignItems:'flex-end',gap:'8px',height:'130px'}})
+    const order=[r[1],r[0],r[2]]
+    const heights=['80px','120px','60px'],colors=['#94a3b8','#eab308','#c2410c'],labels=['🥈','🥇','🥉']
+    order.forEach((p,i)=>{
+      const item=el('div',{style:{flex:'1',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end'}})
+      item.append(el('p',{style:{fontSize:'12px',fontWeight:'600',textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',width:'100%',marginBottom:'4px'}},p?.name||''),
+        el('p',{style:{fontSize:'11px',color:'var(--muted)',textAlign:'center',marginBottom:'4px'}},`${p?.wins}W · ${p?.points}pts`),
+        el('div',{cls:'pod-bar',style:{height:heights[i],background:`linear-gradient(135deg,${colors[i]},${colors[i]}99)`}},el('span',{style:{fontSize:'20px'}},labels[i]))
+      )
+      pod.appendChild(item)
+    })
+    main.appendChild(pod)
+  }
+
+  main.appendChild(vStandings())
+
+  // all matches
+  const hc=el('div',{cls:'card'})
+  const htr=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'},onClick:()=>{
+    showAll=!showAll
+    const hl=document.getElementById('hall');const hch=document.getElementById('hchev')
+    if(hl)hl.style.display=showAll?'flex':'none'
+    if(hch)hch.style.transform=showAll?'':'rotate(-90deg)'
+  }})
+  const hll=el('div',{style:{display:'flex',alignItems:'center',gap:'8px'}})
+  const hii=svg('hist',16);hii.style.color='var(--muted)'
+  hll.append(hii,el('h3',{cls:'fd',style:{fontSize:'22px'}},'All Matches'),badge(String(S.done.length),'muted'))
+  const hch=svg('cd',16);hch.id='hchev';hch.style.color='var(--muted)';hch.style.transform='rotate(-90deg)'
+  htr.append(hll,hch);hc.appendChild(htr)
+  const hall=el('div',{id:'hall',style:{display:'none',flexDirection:'column',gap:'8px',marginTop:'12px'}})
+  ;[...S.done].reverse().forEach(m=>hall.appendChild(vHistItem(m)))
+  hc.appendChild(hall);main.appendChild(hc)
+
+  main.appendChild(el('button',{cls:'btn btn-sec btn-lg w-full',onClick:()=>{
+    S={phase:'setup',step:0,mode:null,scoreMode:null,courts:1,playerCount:8,playerNames:Array(16).fill(''),players:[],done:[],current:[],round:1,inputs:{},showHist:false,editing:false}
+    render()
+  }},svg('restart',16),'New Tournament'))
+
+  wrap.appendChild(main);return wrap
+}
+
+// ── actions ───────────────────────────────────────────────────────────────────
+function startGame(){
+  const names=S.playerNames.slice(0,S.playerCount)
+  S.players=shuf(names.map((n,i)=>mkPlayer(n||`Player ${i+1}`)))
+  S.done=[];S.round=1;S.inputs={}
+  S.current=genMatches(S.players,[],S.mode,1,S.courts)
+  S.phase='playing';render()
+}
+
+function submitRound(){
+  if(!S.current.length||!S.scoreMode||!S.mode)return
+  const completions=[]
+  for(const m of S.current){
+    const inp=S.inputs[m.id]||{scoreA:'',scoreB:'',sets:[]}
+    let completed
+    if(S.scoreMode==='tennis')completed={...m,sets:inp.sets||[],completed:true}
+    else{
+      const sA=parseInt(inp.scoreA,10)||0
+      const sB=parseInt(inp.scoreB,10)||0
+      completed={...m,scoreA:sA,scoreB:sB,completed:true}
+    }
+    completions.push(completed)
+  }
+  let up=[...S.players]
+  for(const c of completions)up=applyResult(up,c,S.scoreMode)
+  const newDone=[...S.done,...completions]
+  S.players=up;S.done=newDone;S.round++;S.inputs={}
+  S.current=genMatches(up,newDone,S.mode,S.round,S.courts)
+  render()
+}
+
+render()
+</script>
+</body>
+</html>
