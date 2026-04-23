@@ -8,84 +8,105 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f3f4f6;--surface:#ffffff;--surface-2:#e5e7eb;--surface-3:#d1d5db;
-  --blue:#2563eb; /* Sporty Royal Blue */
-  --yellow:#84cc16; /* Fresh Padel Green */
-  --orange:#ea580c;--red:#dc2626;--green:#16a34a;
-  --text:#111827;--muted:#4b5563;--border:#d1d5db;--border-bright:#bef264;
+  /* Night Mode Backgrounds */
+  --bg:#0f172a;--surface:#1e293b;--surface-2:#334155;--surface-3:#475569;
+  
+  /* PADEL NEON THEME */
+  --primary:#ccff00; /* Dominan: Ijo Stabilo Padel */
+  --primary-hover:#b3e600;
+  --primary-glow:rgba(204,255,0,0.2);
+  --primary-bg:rgba(204,255,0,0.1);
+  
+  --secondary:#0ea5e9; /* Aksen: Biru Langit */
+  --secondary-hover:#0284c7;
+  --secondary-glow:rgba(14,165,233,0.2);
+  --secondary-bg:rgba(14,165,233,0.1);
+
+  /* Variabel mapping agar logic jalan */
+  --blue: var(--primary); 
+  --yellow: var(--secondary);
+  
+  --orange:#f97316;--red:#ef4444;--green:#22c55e;
+  --text:#f8fafc; /* Teks terang untuk dark mode */
+  --dark-text:#0f172a; /* Teks gelap untuk di atas stabilo */
+  --muted:#94a3b8;
+  --border:#334155;--border-bright:#ccff00;
 }
 body{margin:0;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
 .fd{font-family:'Bebas Neue',sans-serif;letter-spacing:.04em}
-*{box-sizing:border-box}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--surface)}::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:3px}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
 input[type=number]{-moz-appearance:textfield}
 
 .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px}
-.card.glow{box-shadow:0 0 20px rgba(59,130,246,.15);border-color:var(--border-bright)}
+.card.glow{box-shadow:0 0 20px var(--primary-glow);border-color:var(--border-bright)}
 
 .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;letter-spacing:.4px}
-.b-blue{background:rgba(59,130,246,.12);color:#3b82f6;border:1px solid rgba(59,130,246,.25)}
-.b-yellow{background:rgba(234,179,8,.12);color:#ca8a04;border:1px solid rgba(234,179,8,.25)}
+.b-blue{background:var(--primary-bg);color:var(--primary);border:1px solid var(--primary-glow)}
+.b-yellow{background:var(--secondary-bg);color:var(--secondary);border:1px solid var(--secondary-glow)}
 .b-orange{background:rgba(249,115,22,.12);color:#ea580c;border:1px solid rgba(249,115,22,.25)}
-.b-muted{background:rgba(0,0,0,.05);color:#64748b;border:1px solid rgba(0,0,0,.08)}
+.b-muted{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid rgba(255,255,255,.08)}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:12px;cursor:pointer;font-family:'Outfit',sans-serif;font-weight:600;transition:all .15s;white-space:nowrap;font-size:14px}
-.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:disabled{opacity:.4;cursor:not-allowed;background:var(--surface-3);color:var(--muted);box-shadow:none}
 .btn-sm{padding:6px 14px;font-size:13px;border-radius:8px}
 .btn-md{padding:10px 20px}
 .btn-lg{padding:14px 28px;font-size:15px}
-.btn-primary{background:var(--blue);color:#fff;box-shadow:0 0 20px rgba(59,130,246,.25)}
-.btn-primary:not(:disabled):hover{background:#2563eb}
-.btn-yellow{background:var(--yellow);color:#fff;box-shadow:0 0 20px rgba(234,179,8,.25)}
-.btn-yellow:not(:disabled):hover{background:#ca8a04}
+
+/* Tombol Ijo Stabilo harus teks hitam */
+.btn-primary{background:var(--primary);color:var(--dark-text);box-shadow:0 0 20px var(--primary-glow)}
+.btn-primary:not(:disabled):hover{background:var(--primary-hover)}
+
+.btn-yellow{background:var(--secondary);color:#fff;box-shadow:0 0 20px var(--secondary-glow)}
+.btn-yellow:not(:disabled):hover{background:var(--secondary-hover)}
+
 .btn-sec{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
 .btn-sec:not(:disabled):hover{background:var(--surface-3)}
 .btn-ghost{background:transparent;color:var(--muted)}
-.btn-ghost:not(:disabled):hover{background:rgba(0,0,0,.04);color:var(--text)}
+.btn-ghost:not(:disabled):hover{background:rgba(255,255,255,.05);color:var(--text)}
 .btn-danger{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
 .btn-danger:not(:disabled):hover{background:rgba(239,68,68,.2)}
 .w-full{width:100%}
 
 input.ti{width:100%;background:var(--surface-2);border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;font-size:14px;font-family:'Outfit',sans-serif;color:var(--text);outline:none;transition:border-color .15s}
 input.ti:focus{border-color:var(--border-bright)}
-.score-in{width:90px;text-align:center;background:var(--surface-3);border:1.5px solid var(--border-bright);border-radius:16px;padding:14px 6px;font-size:44px;font-family:'Bebas Neue',sans-serif;color:var(--blue);outline:none;transition:all .15s}
-.score-in:focus{border-color:var(--blue);box-shadow:0 0 15px rgba(59,130,246,.2)}
-.score-in.team-b{color:var(--yellow);border-color:rgba(234,179,8,.5)}
-.score-in.team-b:focus{border-color:var(--yellow);box-shadow:0 0 15px rgba(234,179,8,.2)}
-.score-auto{width:90px;text-align:center;background:var(--surface-2);border:1.5px solid var(--border);border-radius:16px;padding:14px 6px;font-size:44px;font-family:'Bebas Neue',sans-serif;color:var(--yellow);display:flex;align-items:center;justify-content:center}
+.score-in{width:90px;text-align:center;background:var(--surface-3);border:1.5px solid var(--border-bright);border-radius:16px;padding:14px 6px;font-size:44px;font-family:'Bebas Neue',sans-serif;color:var(--primary);outline:none;transition:all .15s}
+.score-in:focus{border-color:var(--primary);box-shadow:0 0 15px var(--primary-glow)}
+.score-in.team-b{color:var(--secondary);border-color:var(--secondary-glow)}
+.score-in.team-b:focus{border-color:var(--secondary);box-shadow:0 0 15px var(--secondary-glow)}
+.score-auto{width:90px;text-align:center;background:var(--surface-2);border:1.5px solid var(--border);border-radius:16px;padding:14px 6px;font-size:44px;font-family:'Bebas Neue',sans-serif;color:var(--secondary);display:flex;align-items:center;justify-content:center}
 
 .pill{background:var(--surface-2);border:1.5px solid var(--border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted)}
-.pill:hover{border-color:rgba(0,0,0,.2);color:var(--text)}
-.pill.sel-b{background:rgba(59,130,246,.1);border-color:var(--blue);color:var(--blue)}
-.pill.sel-y{background:rgba(234,179,8,.1);border-color:var(--yellow);color:#ca8a04}
+.pill:hover{border-color:rgba(255,255,255,.2);color:var(--text)}
+.pill.sel-b{background:var(--primary-bg);border-color:var(--primary);color:var(--primary)}
+.pill.sel-y{background:var(--secondary-bg);border-color:var(--secondary);color:var(--secondary)}
 
 .mode-card{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;border-radius:16px;border:2px solid var(--border);padding:20px;cursor:pointer;transition:all .15s;background:var(--surface-2);text-align:left;position:relative}
-.mode-card:hover{border-color:rgba(0,0,0,.15)}
-.mode-card.mc-b{border-color:var(--blue);background:rgba(59,130,246,.06);box-shadow:0 0 25px rgba(59,130,246,.12)}
-.mode-card.mc-y{border-color:var(--yellow);background:rgba(234,179,8,.06);box-shadow:0 0 25px rgba(234,179,8,.12)}
+.mode-card:hover{border-color:rgba(255,255,255,.15)}
+.mode-card.mc-b{border-color:var(--primary);background:var(--primary-bg);box-shadow:0 0 25px var(--primary-glow)}
+.mode-card.mc-y{border-color:var(--secondary);background:var(--secondary-bg);box-shadow:0 0 25px var(--secondary-glow)}
 
 .sc-opt{width:100%;display:flex;align-items:center;justify-content:space-between;border-radius:16px;border:2px solid var(--border);padding:16px 20px;cursor:pointer;transition:all .15s;background:var(--surface-2)}
-.sc-opt:hover{border-color:rgba(0,0,0,.15)}
-.sc-opt.sc-b{border-color:var(--blue);background:rgba(59,130,246,.06)}
-.sc-opt.sc-y{border-color:var(--yellow);background:rgba(234,179,8,.06)}
+.sc-opt:hover{border-color:rgba(255,255,255,.15)}
+.sc-opt.sc-b{border-color:var(--primary);background:var(--primary-bg)}
+.sc-opt.sc-y{border-color:var(--secondary);background:var(--secondary-bg)}
 .sc-opt.sc-o{border-color:var(--orange);background:rgba(249,115,22,.06)}
 .rdot{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
-.rdot.rd-b{border-color:var(--blue);background:var(--blue)}
-.rdot.rd-y{border-color:var(--yellow);background:var(--yellow)}
+.rdot.rd-b{border-color:var(--primary);background:var(--primary)}
+.rdot.rd-y{border-color:var(--secondary);background:var(--secondary)}
 .rdot.rd-o{border-color:var(--orange);background:var(--orange)}
 
 .sdot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
-.sdot-active{background:var(--blue);color:#fff}
-.sdot-done{background:var(--surface-3);color:var(--blue)}
+.sdot-active{background:var(--primary);color:var(--dark-text)}
+.sdot-done{background:var(--surface-3);color:var(--primary)}
 .sdot-pending{background:var(--surface-2);color:var(--muted)}
 .sline{flex:1;height:2px;background:var(--border);border-radius:1px}
-.sline-done{background:var(--blue)}
+.sline-done{background:var(--primary)}
 
 .hdr{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 
-.team-chip{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:12px;padding:8px 12px;text-align:center;font-weight:600;font-size:14px;color:var(--blue)}
-.team-chip.b{background:rgba(234,179,8,.08);border-color:rgba(234,179,8,.2);color:#ca8a04}
+.team-chip{background:var(--primary-bg);border:1px solid var(--primary-glow);border-radius:12px;padding:8px 12px;text-align:center;font-weight:600;font-size:14px;color:var(--primary)}
+.team-chip.b{background:var(--secondary-bg);border-color:var(--secondary-glow);color:var(--secondary)}
 
 table.st{width:100%;border-collapse:collapse;font-size:13px}
 .st th{text-align:left;padding:8px 10px;font-weight:600;color:var(--muted);border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
@@ -95,9 +116,9 @@ table.st{width:100%;border-collapse:collapse;font-size:13px}
 
 .hi{display:flex;align-items:center;gap:10px;background:var(--surface-2);border-radius:12px;padding:10px 14px;font-size:13px}
 
-.modal-bg{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.45);backdrop-filter:blur(4px)}
+.modal-bg{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.7);backdrop-filter:blur(4px)}
 
-.winner-ring{width:80px;height:80px;border-radius:50%;background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.winner-ring{width:80px;height:80px;border-radius:50%;background:var(--primary-bg);border:1px solid var(--primary-glow);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
 .pod-bar{width:100%;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center}
 </style>
 </head>
@@ -268,7 +289,7 @@ function vSetup(){
 
   wrap.appendChild(el('div',{style:{paddingTop:'16px',marginBottom:'16px',textAlign:'center'}},
     el('h1',{cls:'fd',style:{fontSize:'60px',lineHeight:'1',color:'var(--text)'}},'PADELIN'),
-    el('p',{cls:'fd',style:{fontSize:'18px',color:'var(--blue)',marginTop:'-2px',letterSpacing:'.08em'}},'PADEL SCORE TRACKER'),
+    el('p',{cls:'fd',style:{fontSize:'18px',color:'var(--primary)',marginTop:'-2px',letterSpacing:'.08em'}},'PADEL SCORE TRACKER'),
     el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'6px',fontWeight:'500'}},'Welcome to PADELIN \u2014 ready to play some padel? \uD83C\uDFBE')
   ))
 
@@ -277,7 +298,7 @@ function vSetup(){
   ;['Mode','Players','Scoring'].forEach((lbl,i)=>{
     const cls=i<S.step?'sdot-done':i===S.step?'sdot-active':'sdot-pending'
     const dot=el('div',{cls:`sdot ${cls}`},i<S.step?svg('check',12):String(i+1))
-    const label=el('span',{style:{fontSize:'11px',fontWeight:'600',color:i===S.step?'var(--blue)':'var(--muted)'}},lbl)
+    const label=el('span',{style:{fontSize:'11px',fontWeight:'600',color:i===S.step?'var(--primary)':'var(--muted)'}},lbl)
     sr.appendChild(el('div',{style:{display:'flex',alignItems:'center',gap:'6px'}},dot,label))
     if(i<2)sr.appendChild(el('div',{cls:`sline${i<S.step?' sline-done':''}`,style:{minWidth:'24px'}}))
   })
@@ -297,10 +318,11 @@ function vSetup(){
     ].forEach(m=>{
       const active=S.mode===m.id
       const mc=el('div',{cls:`mode-card ${active?'mc-'+m.c:''}`,onClick:()=>{S.mode=m.id;render()}})
-      const ic=svg(m.ic,28);ic.style.color=m.c==='b'?'var(--blue)':'var(--yellow)'
+      const ic=svg(m.ic,28);ic.style.color=m.c==='b'?'var(--primary)':'var(--secondary)'
       if(active){
-        const chk=el('div',{style:{position:'absolute',top:'12px',right:'12px',background:m.c==='b'?'var(--blue)':'var(--yellow)',borderRadius:'50%',padding:'2px'}},svg('check',10))
-        chk.querySelector('svg').style.color='#fff';mc.appendChild(chk)
+        const chk=el('div',{style:{position:'absolute',top:'12px',right:'12px',background:m.c==='b'?'var(--primary)':'var(--secondary)',borderRadius:'50%',padding:'2px'}},svg('check',10))
+        chk.querySelector('svg').style.color=m.c==='b'?'var(--dark-text)':'#fff';
+        mc.appendChild(chk)
       }
       mc.append(ic,el('div',{},el('p',{cls:'fd',style:{fontSize:'24px'}},m.label),el('p',{style:{fontSize:'11px',color:'var(--muted)',marginTop:'4px',lineHeight:'1.4'}},m.desc)))
       row.appendChild(mc)
@@ -351,7 +373,7 @@ function vSetup(){
     const namesWrap=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px',maxHeight:'240px',overflowY:'auto',paddingRight:'4px'}})
     for(let i=0;i<S.playerCount;i++){
       const row=el('div',{style:{display:'flex',alignItems:'center',gap:'8px'}})
-      const num=el('div',{cls:'fd',style:{width:'28px',height:'28px',borderRadius:'50%',background:'var(--surface-3)',color:'var(--muted)',fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:'0'}},String(i+1))
+      const num=el('div',{cls:'fd',style:{width:'28px',height:'28px',borderRadius:'50%',background:'var(--surface-3)',color:'var(--text)',fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:'0'}},String(i+1))
       const inp=el('input',{cls:'ti',style:{flex:'1'},type:'text',placeholder:`Player ${i+1}`,value:S.playerNames[i]??'',onInput:e=>{S.playerNames[i]=e.target.value}})
       row.append(num,inp);namesWrap.appendChild(row)
     }
@@ -373,7 +395,7 @@ function vSetup(){
       const active=S.scoreMode===o.id
       const opt=el('div',{cls:`sc-opt${active?' sc-'+o.sc:''}`,onClick:()=>{S.scoreMode=o.id;render()}})
       const left=el('div',{},el('p',{cls:'fd',style:{fontSize:'24px'}},o.label),el('p',{style:{fontSize:'11px',color:'var(--muted)',marginTop:'2px'}},o.sub))
-      const dot=el('div',{cls:`rdot${active?' '+o.rc:''}`},active?el('div',{style:{width:'6px',height:'6px',background:'#fff',borderRadius:'50%'}}):'')
+      const dot=el('div',{cls:`rdot${active?' '+o.rc:''}`},active?el('div',{style:{width:'6px',height:'6px',background:o.sc==='b'?'var(--dark-text)':'#fff',borderRadius:'50%'}}):'')
       opt.append(left,dot);ow.appendChild(opt)
     })
     card.appendChild(ow)
@@ -400,7 +422,7 @@ function vPlaying(){
   const scoreL=S.scoreMode==='total16'?'T16':S.scoreMode==='total21'?'T21':'Tennis'
   const hdr=el('div',{cls:'hdr'})
   const hl=el('div',{style:{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}})
-  hl.append(el('span',{cls:'fd',style:{fontSize:'20px',color:'var(--blue)'}},'PADELIN'),badge(modeL,S.mode==='americano'?'blue':'yellow'),badge(scoreL,S.scoreMode==='total16'?'blue':S.scoreMode==='total21'?'yellow':'orange'),badge(`Round ${S.round}`,'muted'))
+  hl.append(el('span',{cls:'fd',style:{fontSize:'20px',color:'var(--primary)'}},'PADELIN'),badge(modeL,S.mode==='americano'?'blue':'yellow'),badge(scoreL,S.scoreMode==='total16'?'blue':S.scoreMode==='total21'?'yellow':'orange'),badge(`Round ${S.round}`,'muted'))
   const hr=el('div',{style:{display:'flex',gap:'8px'}})
   hr.append(
     el('button',{cls:'btn btn-ghost btn-sm',onClick:()=>{S.editing=true;render()}},svg('edit',14)),
@@ -414,8 +436,8 @@ function vPlaying(){
 
   if(S.current.length===0){
     const ec=el('div',{cls:'card',style:{textAlign:'center',marginTop:'32px',display:'flex',flexDirection:'column',gap:'16px',alignItems:'center'}})
-    const ti=svg('trophy',40);ti.style.color='var(--yellow)'
-    ec.append(ti,el('h2',{cls:'fd',style:{fontSize:'28px'}},'All players played equally!'),el('p',{style:{fontSize:'13px',color:'var(--muted)'}},'Great session — check the final standings.'),el('button',{cls:'btn btn-yellow btn-lg w-full',onClick:()=>{S.phase='finished';render()}},svg('trophy',16),'See Final Standings'))
+    const ti=svg('trophy',40);ti.style.color='var(--primary)'
+    ec.append(ti,el('h2',{cls:'fd',style:{fontSize:'28px'}},'All players played equally!'),el('p',{style:{fontSize:'13px',color:'var(--muted)'}},'Great session — check the final standings.'),el('button',{cls:'btn btn-primary btn-lg w-full',onClick:()=>{S.phase='finished';render()}},svg('trophy',16),'See Final Standings'))
     main.appendChild(ec)
     main.appendChild(vStandings())
     wrap.appendChild(main);return wrap
@@ -451,7 +473,7 @@ function vMatchCard(match){
   card.append(
     el('div',{},
       el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px'}},`Court ${match.courtNumber}`),
-      el('h2',{cls:'fd',style:{fontSize:'28px',color:'var(--blue)'}},'Now Playing')
+      el('h2',{cls:'fd',style:{fontSize:'28px',color:'var(--primary)'}},'Now Playing')
     )
   )
   const teams=el('div',{style:{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:'12px',alignItems:'center'}})
@@ -475,19 +497,19 @@ function vScoreInput(match){
       inp.sets.forEach((s,i)=>{
         const row=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface-3)',borderRadius:'12px',padding:'10px 14px'}})
         const sc=el('span',{cls:'fd',style:{fontSize:'24px'}})
-        sc.appendChild(el('span',{style:{color:s.a>s.b?'var(--blue)':'var(--muted)'}},String(s.a)))
+        sc.appendChild(el('span',{style:{color:s.a>s.b?'var(--primary)':'var(--muted)'}},String(s.a)))
         sc.appendChild(document.createTextNode(' — '))
-        sc.appendChild(el('span',{style:{color:s.b>s.a?'var(--blue)':'var(--muted)'}},String(s.b)))
+        sc.appendChild(el('span',{style:{color:s.b>s.a?'var(--primary)':'var(--muted)'}},String(s.b)))
         const del=el('button',{cls:'btn btn-ghost btn-sm',style:{padding:'4px'},onClick:()=>{
           if(!S.inputs[match.id])S.inputs[match.id]={scoreA:'',sets:[]}
           S.inputs[match.id].sets=inp.sets.filter((_,j)=>j!==i);render()
         }},svg('x',14))
-        row.append(sc,el('span',{style:{fontSize:'11px',color:'var(--muted)'}},`Set ${i+1}`),del)
+        row.append(sc,el('span',{style:{fontSize:'11px',color:'var(--text)'}},`Set ${i+1}`),del)
         sw.appendChild(row)
       })
       const sA=inp.sets.filter(s=>s.a>s.b).length,sB=inp.sets.filter(s=>s.b>s.a).length
       const sr=el('p',{style:{textAlign:'center',fontSize:'12px',color:'var(--muted)'}})
-      sr.append(el('span',{style:{color:'var(--blue)',fontWeight:'700'}},String(sA)),' – ',el('span',{style:{color:'var(--yellow)',fontWeight:'700'}},String(sB)),' sets')
+      sr.append(el('span',{style:{color:'var(--primary)',fontWeight:'700'}},String(sA)),' – ',el('span',{style:{color:'var(--secondary)',fontWeight:'700'}},String(sB)),' sets')
       sw.appendChild(sr);wrap.appendChild(sw)
     }
     let tA='',tB=''
@@ -559,11 +581,11 @@ function vScoreInput(match){
   })
 
   const colA=el('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:'6px'}},
-    el('span',{style:{fontSize:'11px',fontWeight:'600',color:'var(--blue)',textTransform:'uppercase',letterSpacing:'.5px'}},'Team A'),
+    el('span',{style:{fontSize:'11px',fontWeight:'600',color:'var(--primary)',textTransform:'uppercase',letterSpacing:'.5px'}},'Team A'),
     inpA
   )
   const colB=el('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:'6px'}},
-    el('span',{style:{fontSize:'11px',fontWeight:'600',color:'var(--yellow)',textTransform:'uppercase',letterSpacing:'.5px'}},'Team B'),
+    el('span',{style:{fontSize:'11px',fontWeight:'600',color:'var(--secondary)',textTransform:'uppercase',letterSpacing:'.5px'}},'Team B'),
     inpB
   )
   row.append(colA,el('div',{cls:'fd',style:{fontSize:'22px',color:'var(--muted)',paddingTop:'24px'}},'vs'),colB)
@@ -574,7 +596,7 @@ function vScoreInput(match){
 function vStandings(hlIds=[]){
   const card=el('div',{cls:'card'})
   const tr=el('div',{style:{display:'flex',alignItems:'center',gap:'8px',marginBottom:'12px'}})
-  const si=svg('shield',16);si.style.color='var(--blue)'
+  const si=svg('shield',16);si.style.color='var(--primary)'
   tr.append(si,el('h3',{cls:'fd',style:{fontSize:'22px'}},'Standings'),badge(`${S.done.length} played`,'muted'))
   card.appendChild(tr)
   const r=ranked(S.players)
@@ -588,17 +610,17 @@ function vStandings(hlIds=[]){
   const tb=el('tbody')
   r.forEach((p,i)=>{
     const hl=hlIds.includes(p.id),diff=p.points-p.pointsAgainst
-    const row=el('tr',{style:{background:hl?'rgba(59,130,246,.06)':''}})
-    const rankEl=i===0?(()=>{const c=svg('crown',14);c.style.color='var(--yellow)';return c})():el('span',{style:{color:'var(--muted)'}},(i+1).toString())
+    const row=el('tr',{style:{background:hl?'var(--primary-bg)':''}})
+    const rankEl=i===0?(()=>{const c=svg('crown',14);c.style.color='var(--primary)';return c})():el('span',{style:{color:'var(--muted)'}},(i+1).toString())
     row.append(
       el('td',{},rankEl),
-      el('td',{style:{fontWeight:'600',color:hl?'var(--blue)':'',maxWidth:'120px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.name),
+      el('td',{style:{fontWeight:'600',color:hl?'var(--primary)':'',maxWidth:'120px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.name),
       el('td',{style:{textAlign:'center',color:'var(--muted)'}},String(p.gamesPlayed)),
-      el('td',{style:{textAlign:'center',fontWeight:'700',color:'var(--blue)'}},String(p.wins)),
+      el('td',{style:{textAlign:'center',fontWeight:'700',color:'var(--primary)'}},String(p.wins)),
       el('td',{style:{textAlign:'center',color:'var(--muted)'}},String(p.draws)),
       el('td',{style:{textAlign:'center',color:'var(--red)'}},String(p.losses)),
       el('td',{style:{textAlign:'center',fontWeight:'700'}},String(p.points)),
-      el('td',{style:{textAlign:'center',fontWeight:'600',color:diff>0?'var(--blue)':diff<0?'var(--red)':'var(--muted)'}},`${diff>0?'+':''}${diff}`)
+      el('td',{style:{textAlign:'center',fontWeight:'600',color:diff>0?'var(--primary)':diff<0?'var(--red)':'var(--muted)'}},`${diff>0?'+':''}${diff}`)
     )
     tb.appendChild(row)
   })
@@ -631,9 +653,9 @@ function vHistItem(m){
   const item=el('div',{cls:'hi'})
   item.append(
     el('span',{cls:'fd',style:{minWidth:'40px',textAlign:'center',fontSize:'14px',color:'var(--muted)'}},`R${m.roundNumber}C${m.courtNumber}`),
-    el('div',{style:{flex:'1',minWidth:'0'}},el('span',{style:{display:'block',fontWeight:'600',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:winA?'var(--blue)':'var(--muted)'}},nA)),
+    el('div',{style:{flex:'1',minWidth:'0'}},el('span',{style:{display:'block',fontWeight:'600',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:winA?'var(--primary)':'var(--muted)'}},nA)),
     el('span',{cls:'fd',style:{fontSize:'18px',padding:'0 6px'}},sc),
-    el('div',{style:{flex:'1',minWidth:'0',textAlign:'right'}},el('span',{style:{display:'block',fontWeight:'600',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:!winA?'var(--blue)':'var(--muted)'}},nB))
+    el('div',{style:{flex:'1',minWidth:'0',textAlign:'right'}},el('span',{style:{display:'block',fontWeight:'600',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:!winA?'var(--secondary)':'var(--muted)'}},nB))
   )
   return item
 }
@@ -665,10 +687,10 @@ function vFinished(){
   const wrap=el('div',{style:{minHeight:'100vh',display:'flex',flexDirection:'column'}})
 
   // hero
-  const hero=el('div',{style:{textAlign:'center',padding:'48px 16px 32px',background:'linear-gradient(to bottom,rgba(59,130,246,.05),transparent)'}})
-  const ring=el('div',{cls:'winner-ring'});const ci=svg('crown',36);ci.style.color='var(--yellow)';ring.appendChild(ci)
+  const hero=el('div',{style:{textAlign:'center',padding:'48px 16px 32px',background:'linear-gradient(to bottom,var(--primary-bg),transparent)'}})
+  const ring=el('div',{cls:'winner-ring'});const ci=svg('crown',36);ci.style.color='var(--primary)';ring.appendChild(ci)
   hero.append(ring,badge('Tournament Complete','yellow'),el('h1',{cls:'fd',style:{fontSize:'clamp(40px,10vw,72px)',lineHeight:'1',marginTop:'12px'}},w?.name||''),
-    el('p',{style:{fontSize:'15px',color:'var(--muted)',marginTop:'8px'}},`${w?.wins} wins · ${w?.points} points · ${S.done.length} matches`),
+    el('p',{style:{fontSize:'15px',color:'var(--text)',marginTop:'8px'}},`${w?.wins} wins · ${w?.points} points · ${S.done.length} matches`),
     (()=>{const row=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',marginTop:'12px',flexWrap:'wrap'}});row.append(badge(S.mode,'blue'),badge(S.scoreMode==='tennis'?'Tennis':S.scoreMode==='total16'?'Total 16':'Total 21','muted'),badge(`${S.players.length} players`,'muted'));return row})()
   )
   wrap.appendChild(hero)
@@ -679,12 +701,12 @@ function vFinished(){
   if(r.length>=3){
     const pod=el('div',{style:{display:'flex',alignItems:'flex-end',gap:'8px',height:'130px'}})
     const order=[r[1],r[0],r[2]]
-    const heights=['80px','120px','60px'],colors=['#94a3b8','#eab308','#c2410c'],labels=['🥈','🥇','🥉']
+    const heights=['80px','120px','60px'],colors=['#94a3b8','var(--primary)','#ea580c'],labels=['🥈','🥇','🥉']
     order.forEach((p,i)=>{
       const item=el('div',{style:{flex:'1',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end'}})
       item.append(el('p',{style:{fontSize:'12px',fontWeight:'600',textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',width:'100%',marginBottom:'4px'}},p?.name||''),
-        el('p',{style:{fontSize:'11px',color:'var(--muted)',textAlign:'center',marginBottom:'4px'}},`${p?.wins}W · ${p?.points}pts`),
-        el('div',{cls:'pod-bar',style:{height:heights[i],background:`linear-gradient(135deg,${colors[i]},${colors[i]}99)`}},el('span',{style:{fontSize:'20px'}},labels[i]))
+        el('p',{style:{fontSize:'11px',color:'var(--text)',textAlign:'center',marginBottom:'4px'}},`${p?.wins}W · ${p?.points}pts`),
+        el('div',{cls:'pod-bar',style:{height:heights[i],background:`linear-gradient(135deg,${colors[i]},${colors[i]}99)`,color:i===1?'var(--dark-text)':'#fff'}},el('span',{style:{fontSize:'20px'}},labels[i]))
       )
       pod.appendChild(item)
     })
