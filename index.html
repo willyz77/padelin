@@ -112,7 +112,6 @@ function el(tag,attrs,...kids){
     if(k==='cls')e.className=v
     else if(k.startsWith('on'))e.addEventListener(k.slice(2).toLowerCase(),v)
     else if(k==='style'&&typeof v==='object')Object.assign(e.style,v)
-    // FIX PENTING 2.0: Menggunakan metode paling standar agar tidak blank
     else if(typeof v==='boolean') {
       if(v) e.setAttribute(k,'')
       else e.removeAttribute(k)
@@ -232,6 +231,26 @@ let S={
   playerCount:8,playerNames:Array(16).fill(''),
   players:[],done:[],current:[],round:1,
   inputs:{},showHist:false,editing:false,
+}
+
+// ── Update Submit Button Realtime ────────────────────────────────────────────
+function updateSubmitBtn() {
+  const btn = document.getElementById('btn-submit');
+  if (!btn) return;
+  const max = S.scoreMode === 'total16' ? 16 : 21;
+  const isReady = S.current.every(m => {
+    const inp = S.inputs[m.id];
+    if (!inp) return false;
+    if (S.scoreMode === 'tennis') return inp.sets && inp.sets.length > 0;
+    const sa = parseInt(inp.scoreA, 10), sb = parseInt(inp.scoreB, 10);
+    return !isNaN(sa) && !isNaN(sb) && (sa + sb) === max;
+  });
+  
+  if (isReady) {
+    btn.removeAttribute('disabled');
+  } else {
+    btn.setAttribute('disabled', '');
+  }
 }
 
 // ── render ───────────────────────────────────────────────────────────────────
@@ -416,9 +435,10 @@ function vPlaying(){
     if(!inp)return false
     if(S.scoreMode==='tennis')return inp.sets&&inp.sets.length>0
     const sa=parseInt(inp.scoreA,10), sb=parseInt(inp.scoreB,10)
-    return!isNaN(sa)&&!isNaN(sb)&&sa>=0&&sb>=0&&(sa+sb)<=max
+    return!isNaN(sa)&&!isNaN(sb)&&(sa+sb)===max
   })
-  main.appendChild(el('button',{cls:'btn btn-primary btn-lg w-full',disabled:!ready,onClick:submitRound},svg('check',16),`Submit Round ${S.round}`))
+  
+  main.appendChild(el('button',{id:'btn-submit', cls:'btn btn-primary btn-lg w-full',disabled:!ready,onClick:submitRound},svg('check',16),`Submit Round ${S.round}`))
   main.appendChild(vStandings(playingIds))
   main.appendChild(vHistory())
   wrap.appendChild(main);return wrap
@@ -481,40 +501,58 @@ function vScoreInput(match){
     wrap.appendChild(el('div',{style:{display:'flex',alignItems:'center',gap:'8px',justifyContent:'center'}},iA,el('span',{style:{color:'var(--muted)'}},'–'),iB,addBtn))
     return wrap
   }
+  
   const max=S.scoreMode==='total16'?16:21
-  // both scoreA and scoreB are stored; they're independent but each capped by (max - other)
   const initA=inp.scoreA??'', initB=inp.scoreB??''
-
-  function clampScore(val, otherVal, maximum){
-    if(isNaN(val)) return ''
-    const other = parseInt(otherVal, 10)
-    const otherNum = isNaN(other) ? 0 : other
-    return String(Math.max(0, Math.min(maximum - otherNum, val)))
-  }
+  const idA=`scoreA_${match.id}`
+  const idB=`scoreB_${match.id}`
 
   const wrap=el('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:'12px'}})
   const row=el('div',{style:{display:'flex',alignItems:'center',gap:'16px'}})
 
-  const inpA=el('input',{type:'number',cls:'score-in',placeholder:'0',min:'0',max:String(max),value:initA,
+  const inpA=el('input',{type:'number', id:idA, cls:'score-in',placeholder:'0',min:'0',max:String(max),value:initA,
     onInput:e=>{
       let v=parseInt(e.target.value,10)
-      if(isNaN(v)){e.target.value='';if(!S.inputs[match.id])S.inputs[match.id]={scoreA:'',scoreB:'',sets:[]};S.inputs[match.id].scoreA='';return}
-      const curB=parseInt(S.inputs[match.id]?.scoreB||'0',10)||0
-      v=Math.max(0,Math.min(max-curB,v))
-      e.target.value=String(v)
       if(!S.inputs[match.id])S.inputs[match.id]={scoreA:'',scoreB:'',sets:[]}
-      S.inputs[match.id].scoreA=String(v)
+      if(isNaN(v)){
+        e.target.value=''
+        S.inputs[match.id].scoreA=''
+        S.inputs[match.id].scoreB=''
+        document.getElementById(idB).value=''
+      }else{
+        v=Math.max(0,Math.min(max,v))
+        e.target.value=String(v)
+        S.inputs[match.id].scoreA=String(v)
+        
+        // Auto-fill B
+        const bVal = max - v
+        S.inputs[match.id].scoreB=String(bVal)
+        document.getElementById(idB).value=String(bVal)
+      }
+      updateSubmitBtn()
     }
   })
-  const inpB=el('input',{type:'number',cls:'score-in team-b',placeholder:'0',min:'0',max:String(max),value:initB,
+  
+  const inpB=el('input',{type:'number', id:idB, cls:'score-in team-b',placeholder:'0',min:'0',max:String(max),value:initB,
     onInput:e=>{
       let v=parseInt(e.target.value,10)
-      if(isNaN(v)){e.target.value='';if(!S.inputs[match.id])S.inputs[match.id]={scoreA:'',scoreB:'',sets:[]};S.inputs[match.id].scoreB='';return}
-      const curA=parseInt(S.inputs[match.id]?.scoreA||'0',10)||0
-      v=Math.max(0,Math.min(max-curA,v))
-      e.target.value=String(v)
       if(!S.inputs[match.id])S.inputs[match.id]={scoreA:'',scoreB:'',sets:[]}
-      S.inputs[match.id].scoreB=String(v)
+      if(isNaN(v)){
+        e.target.value=''
+        S.inputs[match.id].scoreA=''
+        S.inputs[match.id].scoreB=''
+        document.getElementById(idA).value=''
+      }else{
+        v=Math.max(0,Math.min(max,v))
+        e.target.value=String(v)
+        S.inputs[match.id].scoreB=String(v)
+        
+        // Auto-fill A
+        const aVal = max - v
+        S.inputs[match.id].scoreA=String(aVal)
+        document.getElementById(idA).value=String(aVal)
+      }
+      updateSubmitBtn()
     }
   })
 
@@ -527,7 +565,7 @@ function vScoreInput(match){
     inpB
   )
   row.append(colA,el('div',{cls:'fd',style:{fontSize:'22px',color:'var(--muted)',paddingTop:'24px'}},'vs'),colB)
-  wrap.append(row,el('p',{style:{fontSize:'11px',color:'var(--muted)'}},`Max total: ${max} pts · Both teams enter their own score`))
+  wrap.append(row,el('p',{style:{fontSize:'11px',color:'var(--muted)'}},`Max total: ${max} pts · Input otomatis`))
   return wrap
 }
 
