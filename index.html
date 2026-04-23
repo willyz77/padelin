@@ -180,7 +180,8 @@ function genMatches(players,done,mode,round,courts){
     if(cp.length<4)break
     let teamA,teamB
     if(mode==='mexicano'){
-      teamA=[cp[0].id,cp[1].id];teamB=[cp[2].id,cp[3].id]
+      // Mexicano mod: Rank 1 & 3 vs Rank 2 & 4
+      teamA=[cp[0].id,cp[2].id];teamB=[cp[1].id,cp[3].id]
     }else{
       const pairs=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]]
       const scored=pairs.map(([pa,pb])=>{
