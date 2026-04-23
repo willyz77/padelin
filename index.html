@@ -182,7 +182,8 @@ function mkPlayer(name){return{id:uuid(),name:name.trim()||'Player',wins:0,losse
 function chooseSitOut(players,courts){
   const need=courts*4,rest=players.length-need
   if(rest<=0)return[]
-  const s=[...players].sort((a,b)=>a.restCount-b.restCount||a.gamesPlayed-b.gamesPlayed||a.id.localeCompare(b.id))
+  // Shuf dulu sebelum sort agar yang poinnya sama dipilih secara random untuk istirahat
+  const s=shuf(players).sort((a,b)=>a.restCount-b.restCount||a.gamesPlayed-b.gamesPlayed)
   return s.slice(0,rest).map(p=>p.id)
 }
 
@@ -247,14 +248,23 @@ function applyResult(players,match,scoreMode){
 function ranked(players){return[...players].sort((a,b)=>b.wins-a.wins||b.points-a.points||a.pointsAgainst-b.pointsAgainst)}
 function pn(players,id){return players.find(p=>p.id===id)?.name??'?'}
 
-// ── state ────────────────────────────────────────────────────────────────────
-let S={
+// ── state & localstorage (Auto Save) ─────────────────────────────────────────
+const defaultState = {
   phase:'setup',step:0,
   mode:null,scoreMode:null,courts:1,
-  playerCount:8,playerNames:Array(16).fill(''),
+  playerCount:8,playerNames:Array(24).fill(''),
   players:[],done:[],current:[],round:1,
   inputs:{},showHist:false,editing:false,
+};
+
+let S;
+try {
+  S = JSON.parse(localStorage.getItem('padelin_state')) || JSON.parse(JSON.stringify(defaultState));
+} catch(e) {
+  S = JSON.parse(JSON.stringify(defaultState));
 }
+
+const saveState = () => localStorage.setItem('padelin_state', JSON.stringify(S));
 
 // ── Update Submit Button Realtime ────────────────────────────────────────────
 function updateSubmitBtn() {
@@ -279,6 +289,7 @@ function updateSubmitBtn() {
 // ── render ───────────────────────────────────────────────────────────────────
 const root=document.getElementById('root')
 function render(){
+  saveState(); // Simpan otomatis setiap ada perubahan render
   root.innerHTML=''
   root.appendChild(S.phase==='setup'?vSetup():S.phase==='playing'?vPlaying():vFinished())
 }
@@ -374,7 +385,10 @@ function vSetup(){
     for(let i=0;i<S.playerCount;i++){
       const row=el('div',{style:{display:'flex',alignItems:'center',gap:'8px'}})
       const num=el('div',{cls:'fd',style:{width:'28px',height:'28px',borderRadius:'50%',background:'var(--surface-3)',color:'var(--text)',fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:'0'}},String(i+1))
-      const inp=el('input',{cls:'ti',style:{flex:'1'},type:'text',placeholder:`Player ${i+1}`,value:S.playerNames[i]??'',onInput:e=>{S.playerNames[i]=e.target.value}})
+      const inp=el('input',{cls:'ti',style:{flex:'1'},type:'text',placeholder:`Player ${i+1}`,value:S.playerNames[i]??'',onInput:e=>{
+        S.playerNames[i]=e.target.value; 
+        saveState(); // Save live pas ngetik
+      }})
       row.append(num,inp);namesWrap.appendChild(row)
     }
     card.appendChild(namesWrap)
@@ -423,10 +437,23 @@ function vPlaying(){
   const hdr=el('div',{cls:'hdr'})
   const hl=el('div',{style:{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}})
   hl.append(el('span',{cls:'fd',style:{fontSize:'20px',color:'var(--primary)'}},'PADELIN'),badge(modeL,S.mode==='americano'?'blue':'yellow'),badge(scoreL,S.scoreMode==='total16'?'blue':S.scoreMode==='total21'?'yellow':'orange'),badge(`Round ${S.round}`,'muted'))
+  
   const hr=el('div',{style:{display:'flex',gap:'8px'}})
   hr.append(
+    // Tombol Home
+    el('button',{cls:'btn btn-sec btn-sm',onClick:()=>{
+      if(confirm('Yakin ingin kembali ke awal? Progress turnamen ini akan dibuang.')){
+        localStorage.removeItem('padelin_state');
+        S=JSON.parse(JSON.stringify(defaultState));
+        render();
+      }
+    }},svg('cl',14), 'Home'),
     el('button',{cls:'btn btn-ghost btn-sm',onClick:()=>{S.editing=true;render()}},svg('edit',14)),
-    el('button',{cls:'btn btn-danger btn-sm',onClick:()=>{S.phase='finished';render()}},svg('trophy',14),'End')
+    el('button',{cls:'btn btn-danger btn-sm',onClick:()=>{
+      if(confirm('Akhiri turnamen sekarang dan lihat klasemen akhir?')){
+        S.phase='finished';render();
+      }
+    }},svg('trophy',14),'End')
   )
   hdr.append(hl,hr);wrap.appendChild(hdr)
 
@@ -443,6 +470,19 @@ function vPlaying(){
     wrap.appendChild(main);return wrap
   }
 
+  // Tombol Acak Ulang Ronde (Muncul di atas pertandingan)
+  main.appendChild(el('button', {
+    cls: 'btn btn-sec btn-md w-full',
+    style: {marginBottom: '0px'},
+    onClick: () => {
+      if(confirm('Acak ulang pemain dan rotasi istirahat di ronde ini?')) {
+        S.inputs = {};
+        S.current = genMatches(S.players, S.done, S.mode, S.round, S.courts);
+        render();
+      }
+    }
+  }, svg('restart', 14), 'Acak Ulang Formasi Ronde Ini'));
+
   const sitOutIds=S.current[0]?.sitOut||[]
   const playingIds=S.current.flatMap(m=>[...m.teamA,...m.teamB])
 
@@ -450,7 +490,7 @@ function vPlaying(){
 
   if(sitOutIds.length>0){
     const names=sitOutIds.map(id=>pn(S.players,id)).join(', ')
-    main.appendChild(el('p',{style:{textAlign:'center',fontSize:'12px',color:'var(--muted)'}},`😴 Sitting out: ${names}`))
+    main.appendChild(el('p',{style:{textAlign:'center',fontSize:'12px',color:'var(--muted)'}},`😴 Sedang istirahat: ${names}`))
   }
 
   const max=S.scoreMode==='total16'?16:21
@@ -553,7 +593,8 @@ function vScoreInput(match){
         S.inputs[match.id].scoreB=String(bVal)
         document.getElementById(idB).value=String(bVal)
       }
-      updateSubmitBtn()
+      updateSubmitBtn();
+      saveState(); // Save live
     }
   })
   
@@ -576,7 +617,8 @@ function vScoreInput(match){
         S.inputs[match.id].scoreA=String(aVal)
         document.getElementById(idA).value=String(aVal)
       }
-      updateSubmitBtn()
+      updateSubmitBtn();
+      saveState(); // Save live
     }
   })
 
@@ -733,7 +775,8 @@ function vFinished(){
   hc.appendChild(hall);main.appendChild(hc)
 
   main.appendChild(el('button',{cls:'btn btn-sec btn-lg w-full',onClick:()=>{
-    S={phase:'setup',step:0,mode:null,scoreMode:null,courts:1,playerCount:8,playerNames:Array(16).fill(''),players:[],done:[],current:[],round:1,inputs:{},showHist:false,editing:false}
+    localStorage.removeItem('padelin_state'); // Buang savean lama
+    S=JSON.parse(JSON.stringify(defaultState));
     render()
   }},svg('restart',16),'New Tournament'))
 
