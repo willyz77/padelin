@@ -66,4 +66,371 @@ input.ti:focus{border-color:var(--border-bright)}
 .sc-opt{width:100%;display:flex;align-items:center;justify-content:space-between;border-radius:16px;border:2px solid var(--border);padding:16px 20px;cursor:pointer;transition:all .15s;background:var(--surface-2)}
 .sc-opt:hover{border-color:rgba(0,0,0,.15)}
 .sc-opt.sc-b{border-color:var(--blue);background:rgba(59,130,246,.06)}
-.
+.sc-opt.sc-y{border-color:var(--yellow);background:rgba(234,179,8,.06)}
+.sc-opt.sc-o{border-color:var(--orange);background:rgba(249,115,22,.06)}
+.rdot{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.rdot.rd-b{border-color:var(--blue);background:var(--blue)}
+.rdot.rd-y{border-color:var(--yellow);background:var(--yellow)}
+.rdot.rd-o{border-color:var(--orange);background:var(--orange)}
+
+.sdot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.sdot-active{background:var(--blue);color:#fff}
+.sdot-done{background:var(--surface-3);color:var(--blue)}
+.sdot-pending{background:var(--surface-2);color:var(--muted)}
+.sline{flex:1;height:2px;background:var(--border);border-radius:1px}
+.sline-done{background:var(--blue)}
+
+.hdr{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+
+.team-chip{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:12px;padding:8px 12px;text-align:center;font-weight:600;font-size:14px;color:var(--blue)}
+.team-chip.b{background:rgba(234,179,8,.08);border-color:rgba(234,179,8,.2);color:#ca8a04}
+
+table.st{width:100%;border-collapse:collapse;font-size:13px}
+.st th{text-align:left;padding:8px 10px;font-weight:600;color:var(--muted);border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.st td{padding:10px;border-bottom:1px solid var(--surface-2)}
+.st tr:last-child td{border-bottom:none}
+.st tr:hover td{background:var(--surface-2)}
+
+.hi{display:flex;align-items:center;gap:10px;background:var(--surface-2);border-radius:12px;padding:10px 14px;font-size:13px}
+
+.modal-bg{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.45);backdrop-filter:blur(4px)}
+
+.winner-ring{width:80px;height:80px;border-radius:50%;background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.pod-bar{width:100%;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// ── helpers ──────────────────────────────────────────────────────────────────
+const uuid=()=>crypto.randomUUID()
+const shuf=a=>{const b=[...a];for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]]}return b}
+
+function el(tag,attrs,...kids){
+  const e=document.createElement(tag)
+  for(const[k,v]of Object.entries(attrs||{})){
+    if(k==='cls')e.className=v
+    else if(k.startsWith('on'))e.addEventListener(k.slice(2).toLowerCase(),v)
+    else if(k==='style'&&typeof v==='object')Object.assign(e.style,v)
+    // FIX PENTING: property boolean diproses langsung jadi browser tidak bingung
+    else if(typeof v==='boolean') e[k]=v 
+    else e.setAttribute(k,v)
+  }
+  for(const c of kids.flat(99)){
+    if(c==null||c===false||c===undefined)continue
+    e.appendChild(typeof c==='string'?document.createTextNode(c):c)
+  }
+  return e
+}
+
+function svg(name,sz=16){
+  const P={
+    check:'M20 6 9 17l-5-5',
+    trophy:'M6 9H4.5a2.5 2.5 0 010-5H6m12 5h1.5a2.5 2.5 0 000-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.29 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.29 17 22M18 2H6v7a6 6 0 0012 0V2z',
+    zap:'M13 2 3 14h9l-1 8 10-12h-9l1-8z',
+    crown:'M11.562 3.266a.5.5 0 01.876 0L15.39 8.87l6.084-2.428a.5.5 0 01.682.628l-3.79 8.52a1 1 0 01-.92.61H6.554a1 1 0 01-.92-.61L1.844 7.07a.5.5 0 01.682-.628L8.61 8.87z',
+    edit:'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z',
+    x:'M18 6 6 18M6 6l12 12',plus:'M12 5v14M5 12h14',
+    hist:'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+    restart:'M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8',
+    cl:'M15 18l-6-6 6-6',cr:'M9 18l6-6-6-6',cd:'M6 9l6 6 6-6',
+    shield:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+    star:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z',
+    user:'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z',
+  }
+  const s=document.createElementNS('http://www.w3.org/2000/svg','svg')
+  s.setAttribute('width',sz);s.setAttribute('height',sz)
+  s.setAttribute('viewBox','0 0 24 24');s.setAttribute('fill','none')
+  s.setAttribute('stroke','currentColor');s.setAttribute('stroke-width','2')
+  s.setAttribute('stroke-linecap','round');s.setAttribute('stroke-linejoin','round')
+  const p=document.createElementNS('http://www.w3.org/2000/svg','path')
+  p.setAttribute('d',P[name]||'');s.appendChild(p);return s
+}
+
+function badge(txt,color='muted'){return el('span',{cls:`badge b-${color}`},txt)}
+function div(...a){return el('div',{},...a)}
+function sp(cls,...a){return el('span',{cls},...a)}
+
+// ── game logic ───────────────────────────────────────────────────────────────
+function mkPlayer(name){return{id:uuid(),name:name.trim()||'Player',wins:0,losses:0,draws:0,points:0,pointsAgainst:0,gamesPlayed:0,restCount:0}}
+
+function chooseSitOut(players,courts){
+  const need=courts*4,rest=players.length-need
+  if(rest<=0)return[]
+  const s=[...players].sort((a,b)=>a.restCount-b.restCount||a.gamesPlayed-b.gamesPlayed||a.id.localeCompare(b.id))
+  return s.slice(0,rest).map(p=>p.id)
+}
+
+function genMatches(players,done,mode,round,courts){
+  if(players.length<4)return[]
+  const sitOut=chooseSitOut(players,courts)
+  const pool=players.filter(p=>!sitOut.includes(p.id))
+
+  const pairCounts={}
+  for(const m of done)for(const pair of[m.teamA,m.teamB]){const k=[...pair].sort().join('|');pairCounts[k]=(pairCounts[k]||0)+1}
+
+  let ordered
+  if(mode==='mexicano'){
+    ordered=[...pool].sort((a,b)=>b.wins-a.wins||b.points-a.points||a.pointsAgainst-b.pointsAgainst)
+  }else{
+    ordered=shuf(pool)
+  }
+
+  const matches=[]
+  for(let i=0;i<Math.floor(ordered.length/4);i++){
+    const cp=ordered.slice(i*4,i*4+4)
+    if(cp.length<4)break
+    let teamA,teamB
+    if(mode==='mexicano'){
+      // Mexicano mod: Rank 1 & 3 vs Rank 2 & 4
+      teamA=[cp[0].id,cp[2].id];teamB=[cp[1].id,cp[3].id]
+    }else{
+      const pairs=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]]
+      const scored=pairs.map(([pa,pb])=>{
+        const kA=[cp[pa[0]].id,cp[pa[1]].id].sort().join('|')
+        const kB=[cp[pb[0]].id,cp[pb[1]].id].sort().join('|')
+        return{pair:[pa,pb],s:(pairCounts[kA]||0)+(pairCounts[kB]||0)}
+      })
+      const min=Math.min(...scored.map(s=>s.s))
+      const best=shuf(scored.filter(s=>s.s===min))[0].pair
+      teamA=[cp[best[0][0]].id,cp[best[0][1]].id]
+      teamB=[cp[best[1][0]].id,cp[best[1][1]].id]
+    }
+    matches.push({id:`m${Date.now()}${i}${Math.random().toString(36).slice(2)}`,teamA,teamB,scoreA:null,scoreB:null,sets:[],completed:false,roundNumber:round,courtNumber:i+1,sitOut})
+  }
+  return matches
+}
+
+function applyResult(players,match,scoreMode){
+  const{teamA,teamB,scoreA,scoreB,sets,sitOut}=match
+  let winner='draw',pA=0,pB=0
+  if(scoreMode==='tennis'){
+    const sA=sets.filter(s=>s.a>s.b).length,sB=sets.filter(s=>s.b>s.a).length
+    winner=sA>sB?'A':sB>sA?'B':'draw'
+    pA=sets.reduce((s,x)=>s+x.a,0);pB=sets.reduce((s,x)=>s+x.b,0)
+  }else{pA=scoreA??0;pB=scoreB??0;winner=pA>pB?'A':pB>pA?'B':'draw'}
+  return players.map(p=>{
+    const inA=teamA.includes(p.id),inB=teamB.includes(p.id),rested=(sitOut||[]).includes(p.id)
+    if(!inA&&!inB&&!rested)return p
+    if(rested)return{...p,restCount:p.restCount+1}
+    const myP=inA?pA:pB,oppP=inA?pB:pA
+    const won=(inA&&winner==='A')||(inB&&winner==='B'),lost=(inA&&winner==='B')||(inB&&winner==='A')
+    return{...p,wins:p.wins+(won?1:0),losses:p.losses+(lost?1:0),draws:p.draws+(winner==='draw'?1:0),points:p.points+myP,pointsAgainst:p.pointsAgainst+oppP,gamesPlayed:p.gamesPlayed+1}
+  })
+}
+
+function ranked(players){return[...players].sort((a,b)=>b.wins-a.wins||b.points-a.points||a.pointsAgainst-b.pointsAgainst)}
+function pn(players,id){return players.find(p=>p.id===id)?.name??'?'}
+
+// ── state ────────────────────────────────────────────────────────────────────
+let S={
+  phase:'setup',step:0,
+  mode:null,scoreMode:null,courts:1,
+  playerCount:8,playerNames:Array(16).fill(''),
+  players:[],done:[],current:[],round:1,
+  inputs:{},showHist:false,editing:false,
+}
+
+// ── render ───────────────────────────────────────────────────────────────────
+const root=document.getElementById('root')
+function render(){
+  root.innerHTML=''
+  root.appendChild(S.phase==='setup'?vSetup():S.phase==='playing'?vPlaying():vFinished())
+}
+
+// ─ SETUP ─────────────────────────────────────────────────────────────────────
+function vSetup(){
+  const wrap=el('div',{style:{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:'16px 16px 48px'}})
+
+  wrap.appendChild(el('div',{style:{paddingTop:'16px',marginBottom:'16px',textAlign:'center'}},
+    el('h1',{cls:'fd',style:{fontSize:'60px',lineHeight:'1',color:'var(--text)'}},'PADELIN'),
+    el('p',{cls:'fd',style:{fontSize:'18px',color:'var(--blue)',marginTop:'-2px',letterSpacing:'.08em'}},'PADEL SCORE TRACKER'),
+    el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'6px',fontWeight:'500'}},'Welcome to PADELIN \u2014 ready to play some padel? \uD83C\uDFBE')
+  ))
+
+  // step indicator
+  const sr=el('div',{style:{display:'flex',alignItems:'center',gap:'6px',marginBottom:'16px'}})
+  ;['Mode','Players','Scoring'].forEach((lbl,i)=>{
+    const cls=i<S.step?'sdot-done':i===S.step?'sdot-active':'sdot-pending'
+    const dot=el('div',{cls:`sdot ${cls}`},i<S.step?svg('check',12):String(i+1))
+    const label=el('span',{style:{fontSize:'11px',fontWeight:'600',color:i===S.step?'var(--blue)':'var(--muted)'}},lbl)
+    sr.appendChild(el('div',{style:{display:'flex',alignItems:'center',gap:'6px'}},dot,label))
+    if(i<2)sr.appendChild(el('div',{cls:`sline${i<S.step?' sline-done':''}`,style:{minWidth:'24px'}}))
+  })
+  wrap.appendChild(sr)
+
+  const card=el('div',{cls:'card',style:{maxWidth:'480px',width:'100%'}})
+
+  if(S.step===0){
+    card.appendChild(el('div',{style:{marginBottom:'16px'}},
+      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Choose Game Mode'),
+      el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'4px'}},'Select the tournament format')
+    ))
+    const row=el('div',{style:{display:'flex',gap:'12px'}})
+    ;[
+      {id:'americano',label:'Americano',ic:'zap',desc:'Any player can partner with anyone. Random pairings.',c:'b'},
+      {id:'mexicano',label:'Mexicano',ic:'trophy',desc:'Winners pair with winners. Ranking-based pairings.',c:'y'},
+    ].forEach(m=>{
+      const active=S.mode===m.id
+      const mc=el('div',{cls:`mode-card ${active?'mc-'+m.c:''}`,onClick:()=>{S.mode=m.id;render()}})
+      const ic=svg(m.ic,28);ic.style.color=m.c==='b'?'var(--blue)':'var(--yellow)'
+      if(active){
+        const chk=el('div',{style:{position:'absolute',top:'12px',right:'12px',background:m.c==='b'?'var(--blue)':'var(--yellow)',borderRadius:'50%',padding:'2px'}},svg('check',10))
+        chk.querySelector('svg').style.color='#fff';mc.appendChild(chk)
+      }
+      mc.append(ic,el('div',{},el('p',{cls:'fd',style:{fontSize:'24px'}},m.label),el('p',{style:{fontSize:'11px',color:'var(--muted)',marginTop:'4px',lineHeight:'1.4'}},m.desc)))
+      row.appendChild(mc)
+    })
+    card.appendChild(row)
+  }
+
+  if(S.step===1){
+    card.appendChild(el('div',{style:{marginBottom:'16px'}},
+      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Courts & Players'),
+      el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'4px'}},'Odd numbers supported — players rotate sitting out fairly')
+    ))
+
+    // courts
+    card.appendChild(el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'8px'}},'Number of Courts'))
+    const cr=el('div',{style:{display:'flex',gap:'6px',marginBottom:'16px'}})
+    ;[1,2,3].forEach(n=>{
+      cr.appendChild(el('div',{cls:`pill${S.courts===n?' sel-b':''}`,onClick:()=>{
+        S.courts=n
+        if(S.playerCount<n*4){S.playerCount=n*4}
+        render()
+      }},`${n} Court${n>1?'s':''}`))
+    })
+    card.appendChild(cr)
+
+    const minP=S.courts*4
+    card.appendChild(el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}},'Number of Players'))
+    card.appendChild(el('p',{style:{fontSize:'12px',color:'var(--muted)',marginBottom:'10px'}},`Min ${minP}. Any number works — extra players rotate out each round.`))
+
+    // stepper
+    const stepper=el('div',{style:{display:'flex',alignItems:'center',gap:'12px',marginBottom:'12px'}})
+    const btnM=el('button',{cls:'btn btn-sec btn-sm',style:{width:'36px',height:'36px',padding:'0',flexShrink:'0'},onClick:()=>{
+      if(S.playerCount>minP){S.playerCount--;render()}
+    }},'−')
+    const cntEl=el('div',{cls:'fd',style:{fontSize:'40px',minWidth:'50px',textAlign:'center'}},String(S.playerCount))
+    const btnP=el('button',{cls:'btn btn-sec btn-sm',style:{width:'36px',height:'36px',padding:'0',flexShrink:'0'},onClick:()=>{S.playerCount++;render()}},'+')
+    stepper.append(btnM,cntEl,btnP)
+    card.appendChild(stepper)
+
+    // presets
+    const pr=el('div',{style:{display:'flex',gap:'6px',flexWrap:'wrap',marginBottom:'16px'}})
+    ;[4,5,6,7,8,9,10,12].filter(n=>n>=minP).forEach(n=>{
+      pr.appendChild(el('div',{cls:`pill${S.playerCount===n?' sel-b':''}`,onClick:()=>{S.playerCount=n;render()}},String(n)))
+    })
+    card.appendChild(pr)
+
+    card.appendChild(el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'8px'}},'Player Names'))
+    const namesWrap=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px',maxHeight:'240px',overflowY:'auto',paddingRight:'4px'}})
+    for(let i=0;i<S.playerCount;i++){
+      const row=el('div',{style:{display:'flex',alignItems:'center',gap:'8px'}})
+      const num=el('div',{cls:'fd',style:{width:'28px',height:'28px',borderRadius:'50%',background:'var(--surface-3)',color:'var(--muted)',fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:'0'}},String(i+1))
+      const inp=el('input',{cls:'ti',style:{flex:'1'},type:'text',placeholder:`Player ${i+1}`,value:S.playerNames[i]??'',onInput:e=>{S.playerNames[i]=e.target.value}})
+      row.append(num,inp);namesWrap.appendChild(row)
+    }
+    card.appendChild(namesWrap)
+  }
+
+  if(S.step===2){
+    card.appendChild(el('div',{style:{marginBottom:'16px'}},
+      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Scoring System'),
+      el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'4px'}},'How points are counted each match')
+    ))
+    const opts=[
+      {id:'total16',label:'Total 16',sub:'Team A + Team B = 16 per match',sc:'b',rc:'rd-b'},
+      {id:'total21',label:'Total 21',sub:'Team A + Team B = 21 per match',sc:'y',rc:'rd-y'},
+      {id:'tennis',label:'Tennis Sets',sub:'Best of sets — enter each set score',sc:'o',rc:'rd-o'},
+    ]
+    const ow=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px'}})
+    opts.forEach(o=>{
+      const active=S.scoreMode===o.id
+      const opt=el('div',{cls:`sc-opt${active?' sc-'+o.sc:''}`,onClick:()=>{S.scoreMode=o.id;render()}})
+      const left=el('div',{},el('p',{cls:'fd',style:{fontSize:'24px'}},o.label),el('p',{style:{fontSize:'11px',color:'var(--muted)',marginTop:'2px'}},o.sub))
+      const dot=el('div',{cls:`rdot${active?' '+o.rc:''}`},active?el('div',{style:{width:'6px',height:'6px',background:'#fff',borderRadius:'50%'}}):'')
+      opt.append(left,dot);ow.appendChild(opt)
+    })
+    card.appendChild(ow)
+  }
+
+  const canNext=S.step===0?!!S.mode:S.step===1?S.playerCount>=S.courts*4:!!S.scoreMode
+  const nav=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:'24px'}})
+  const back=el('button',{cls:'btn btn-ghost btn-md',disabled:S.step===0,onClick:()=>{S.step--;render()}},svg('cl',16),'Back')
+  if(S.step<2){
+    nav.append(back,el('button',{cls:'btn btn-primary btn-md',disabled:!canNext,onClick:()=>{S.step++;render()}},'Next',svg('cr',16)))
+  }else{
+    nav.append(back,el('button',{cls:'btn btn-primary btn-lg',disabled:!canNext,onClick:startGame},svg('zap',16),'Start Game!'))
+  }
+  card.appendChild(nav)
+  wrap.appendChild(card)
+  return wrap
+}
+
+// ─ PLAYING ───────────────────────────────────────────────────────────────────
+function vPlaying(){
+  const wrap=el('div',{style:{minHeight:'100vh',display:'flex',flexDirection:'column'}})
+
+  const modeL=S.mode==='americano'?'Americano':'Mexicano'
+  const scoreL=S.scoreMode==='total16'?'T16':S.scoreMode==='total21'?'T21':'Tennis'
+  const hdr=el('div',{cls:'hdr'})
+  const hl=el('div',{style:{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}})
+  hl.append(el('span',{cls:'fd',style:{fontSize:'20px',color:'var(--blue)'}},'PADELIN'),badge(modeL,S.mode==='americano'?'blue':'yellow'),badge(scoreL,S.scoreMode==='total16'?'blue':S.scoreMode==='total21'?'yellow':'orange'),badge(`Round ${S.round}`,'muted'))
+  const hr=el('div',{style:{display:'flex',gap:'8px'}})
+  hr.append(
+    el('button',{cls:'btn btn-ghost btn-sm',onClick:()=>{S.editing=true;render()}},svg('edit',14)),
+    el('button',{cls:'btn btn-danger btn-sm',onClick:()=>{S.phase='finished';render()}},svg('trophy',14),'End')
+  )
+  hdr.append(hl,hr);wrap.appendChild(hdr)
+
+  if(S.editing)wrap.appendChild(vEditModal())
+
+  const main=el('div',{style:{flex:'1',padding:'16px',maxWidth:'512px',margin:'0 auto',width:'100%',paddingBottom:'48px',display:'flex',flexDirection:'column',gap:'16px'}})
+
+  if(S.current.length===0){
+    const ec=el('div',{cls:'card',style:{textAlign:'center',marginTop:'32px',display:'flex',flexDirection:'column',gap:'16px',alignItems:'center'}})
+    const ti=svg('trophy',40);ti.style.color='var(--yellow)'
+    ec.append(ti,el('h2',{cls:'fd',style:{fontSize:'28px'}},'All players played equally!'),el('p',{style:{fontSize:'13px',color:'var(--muted)'}},'Great session — check the final standings.'),el('button',{cls:'btn btn-yellow btn-lg w-full',onClick:()=>{S.phase='finished';render()}},svg('trophy',16),'See Final Standings'))
+    main.appendChild(ec)
+    main.appendChild(vStandings())
+    wrap.appendChild(main);return wrap
+  }
+
+  const sitOutIds=S.current[0]?.sitOut||[]
+  const playingIds=S.current.flatMap(m=>[...m.teamA,...m.teamB])
+
+  S.current.forEach(m=>main.appendChild(vMatchCard(m)))
+
+  if(sitOutIds.length>0){
+    const names=sitOutIds.map(id=>pn(S.players,id)).join(', ')
+    main.appendChild(el('p',{style:{textAlign:'center',fontSize:'12px',color:'var(--muted)'}},`😴 Sitting out: ${names}`))
+  }
+
+  const max=S.scoreMode==='total16'?16:21
+  const ready=S.current.every(m=>{
+    const inp=S.inputs[m.id]
+    if(!inp)return false
+    if(S.scoreMode==='tennis')return inp.sets&&inp.sets.length>0
+    const sa=parseInt(inp.scoreA,10), sb=parseInt(inp.scoreB,10)
+    return!isNaN(sa)&&!isNaN(sb)&&sa>=0&&sb>=0&&(sa+sb)<=max
+  })
+  main.appendChild(el('button',{cls:'btn btn-primary btn-lg w-full',disabled:!ready,onClick:submitRound},svg('check',16),`Submit Round ${S.round}`))
+  main.appendChild(vStandings(playingIds))
+  main.appendChild(vHistory())
+  wrap.appendChild(main);return wrap
+}
+
+function vMatchCard(match){
+  const card=el('div',{cls:'card glow',style:{display:'flex',flexDirection:'column',gap:'16px'}})
+  card.append(
+    el('div',{},
+      el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px'}},`Court ${match.courtNumber}`),
+      el('h2',{cls:'fd',style:{fontSize:'28px',color:'var(--blue)'}},'Now Playing')
+    )
+  )
+  const teams=el('div',{style:{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:'12px',alignItems:'center'}})
+  const ca=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px'}})
+  const cb=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px'}})
+  match.teamA.forEach(id=>ca.appendChild(el('div',{cls:'team-chip'},pn(S.players,id))))
+  match.teamB.forEach(id=>cb.
