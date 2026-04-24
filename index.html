@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Padelin – Padel Score Tracker</title>
+<title>Padelin - Padel Score Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -103,7 +103,7 @@ input.ti:focus{border-color:var(--primary)}
 .sline{flex:1;height:2px;background:var(--border);border-radius:1px}
 .sline-done{background:var(--primary)}
 
-.hdr{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.hdr{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:nowrap}
 
 .team-chip{background:var(--primary-bg);border:1px solid var(--primary-glow);border-radius:12px;padding:8px 12px;text-align:center;font-weight:600;font-size:14px;color:var(--primary)}
 .team-chip.b{background:var(--secondary-bg);border-color:var(--secondary-glow);color:var(--secondary)}
@@ -125,7 +125,7 @@ table.st{width:100%;border-collapse:collapse;font-size:13px}
 <body>
 <div id="root"></div>
 <script>
-// ── helpers ──────────────────────────────────────────────────────────────────
+// -- helpers ------------------------------------------------------------------
 const uuid=()=>crypto.randomUUID()
 const shuf=a=>{const b=[...a];for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]]}return b}
 
@@ -176,7 +176,7 @@ function badge(txt,color='muted'){return el('span',{cls:`badge b-${color}`},txt)
 function div(...a){return el('div',{},...a)}
 function sp(cls,...a){return el('span',{cls},...a)}
 
-// ── game logic ───────────────────────────────────────────────────────────────
+// -- game logic ---------------------------------------------------------------
 function mkPlayer(name){return{id:uuid(),name:name.trim()||'Player',wins:0,losses:0,draws:0,points:0,pointsAgainst:0,gamesPlayed:0,restCount:0}}
 
 function chooseSitOut(players,courts){
@@ -187,8 +187,68 @@ function chooseSitOut(players,courts){
   return s.slice(0,rest).map(p=>p.id)
 }
 
+function mkFixedTeams(players){
+  const teams=[]
+  for(let i=0;i<players.length-1;i+=2){
+    teams.push({id:`t${i}_${players[i].id}_${players[i+1].id}`,players:[players[i].id,players[i+1].id]})
+  }
+  return teams
+}
+
+function chooseSitOutTeams(players,teams,courts){
+  const needTeams=courts*2
+  const restTeams=teams.length-needTeams
+  if(restTeams<=0)return[]
+  const rankedTeams=shuf(teams).sort((a,b)=>{
+    const aRest=Math.min(...a.players.map(id=>players.find(p=>p.id===id)?.restCount??0))
+    const bRest=Math.min(...b.players.map(id=>players.find(p=>p.id===id)?.restCount??0))
+    if(aRest!==bRest)return aRest-bRest
+    const aGames=Math.min(...a.players.map(id=>players.find(p=>p.id===id)?.gamesPlayed??0))
+    const bGames=Math.min(...b.players.map(id=>players.find(p=>p.id===id)?.gamesPlayed??0))
+    return aGames-bGames
+  })
+  return rankedTeams.slice(0,restTeams)
+}
+
+function rankFixedTeams(players,teams){
+  return [...teams].sort((a,b)=>{
+    const aStats=a.players.map(id=>players.find(p=>p.id===id)).filter(Boolean)
+    const bStats=b.players.map(id=>players.find(p=>p.id===id)).filter(Boolean)
+    const aWins=aStats.reduce((s,p)=>s+p.wins,0)
+    const bWins=bStats.reduce((s,p)=>s+p.wins,0)
+    if(bWins!==aWins)return bWins-aWins
+    const aPts=aStats.reduce((s,p)=>s+p.points,0)
+    const bPts=bStats.reduce((s,p)=>s+p.points,0)
+    if(bPts!==aPts)return bPts-aPts
+    const aAgainst=aStats.reduce((s,p)=>s+p.pointsAgainst,0)
+    const bAgainst=bStats.reduce((s,p)=>s+p.pointsAgainst,0)
+    return aAgainst-bAgainst
+  })
+}
+
 function genMatches(players,done,mode,round,courts){
   if(players.length<4)return[]
+  if(mode==='fixed_americano'||mode==='fixed_mexicano'){
+    const teams=mkFixedTeams(players)
+    if(teams.length<2)return[]
+    const sitOutTeams=chooseSitOutTeams(players,teams,courts)
+    const sitOut=sitOutTeams.flatMap(t=>t.players)
+    const pool=teams.filter(t=>!sitOutTeams.some(st=>st.id===t.id))
+    const ordered=mode==='fixed_mexicano'?rankFixedTeams(players,pool):shuf(pool)
+    const matches=[]
+    for(let i=0;i<Math.floor(ordered.length/2);i++){
+      const ta=ordered[i*2]
+      const tb=ordered[i*2+1]
+      if(!ta||!tb)break
+      matches.push({
+        id:`m${Date.now()}${i}${Math.random().toString(36).slice(2)}`,
+        teamA:[...ta.players],
+        teamB:[...tb.players],
+        scoreA:null,scoreB:null,sets:[],completed:false,roundNumber:round,courtNumber:i+1,sitOut
+      })
+    }
+    return matches
+  }
   const sitOut=chooseSitOut(players,courts)
   const pool=players.filter(p=>!sitOut.includes(p.id))
 
@@ -247,14 +307,24 @@ function applyResult(players,match,scoreMode){
 
 function ranked(players){return[...players].sort((a,b)=>b.wins-a.wins||b.points-a.points||a.pointsAgainst-b.pointsAgainst)}
 function pn(players,id){return players.find(p=>p.id===id)?.name??'?'}
+function modeMeta(mode){
+  const map={
+    americano:{label:'Americano',color:'blue'},
+    mexicano:{label:'Mexicano',color:'yellow'},
+    fixed_americano:{label:'Fix Team Americano',color:'blue'},
+    fixed_mexicano:{label:'Fix Team Mexicano',color:'yellow'},
+  }
+  return map[mode]||{label:'Americano',color:'blue'}
+}
 
-// ── state & localstorage (Auto Save) ─────────────────────────────────────────
+// -- state & localstorage (Auto Save) -----------------------------------------
 const defaultState = {
   phase:'setup',step:0,
   mode:null,scoreMode:null,courts:1,
+  gameName:'',
   playerCount:8,playerNames:Array(24).fill(''),
   players:[],done:[],current:[],round:1,
-  inputs:{},showHist:false,editing:false,
+  inputs:{},showHist:false,editing:false,activeTab:'match',
 };
 
 let S;
@@ -264,9 +334,11 @@ try {
   S = JSON.parse(JSON.stringify(defaultState));
 }
 
+if(!S.activeTab)S.activeTab='match'
+
 const saveState = () => localStorage.setItem('padelin_state', JSON.stringify(S));
 
-// ── Update Submit Button Realtime ────────────────────────────────────────────
+// -- Update Submit Button Realtime --------------------------------------------
 function updateSubmitBtn() {
   const btn = document.getElementById('btn-submit');
   if (!btn) return;
@@ -286,7 +358,7 @@ function updateSubmitBtn() {
   }
 }
 
-// ── render ───────────────────────────────────────────────────────────────────
+// -- render -------------------------------------------------------------------
 const root=document.getElementById('root')
 function render(){
   saveState(); // Simpan otomatis setiap ada perubahan render
@@ -294,15 +366,37 @@ function render(){
   root.appendChild(S.phase==='setup'?vSetup():S.phase==='playing'?vPlaying():vFinished())
 }
 
-// ─ SETUP ─────────────────────────────────────────────────────────────────────
+// - SETUP ---------------------------------------------------------------------
 function vSetup(){
   const wrap=el('div',{style:{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:'16px 16px 48px'}})
 
-  wrap.appendChild(el('div',{style:{paddingTop:'16px',marginBottom:'16px',textAlign:'center'}},
-    el('h1',{cls:'fd',style:{fontSize:'60px',lineHeight:'1',color:'var(--text)'}},'PADELIN'),
-    el('p',{cls:'fd',style:{fontSize:'18px',color:'var(--primary)',marginTop:'-2px',letterSpacing:'.08em'}},'PADEL SCORE TRACKER'),
-    el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'6px',fontWeight:'500'}},'Welcome to PADELIN \u2014 ready to play some padel? \uD83C\uDFBE')
-  ))
+  wrap.appendChild(
+    el('div',{style:{
+      width:'100%',
+      maxWidth:'480px',
+      height:'128px',
+      borderRadius:'16px',
+      marginBottom:'16px',
+      backgroundImage:"linear-gradient(rgba(15,23,42,.22),rgba(15,23,42,.22)), url('file:///C:/Users/haqmw/Downloads/lmudpxodsiTtaru6NUSBQ2JPR1ba2121FrytKOOhxV1iO3--boHjLRvkAfgHTZXNxTIwYXBFX9hqptfElzkmAuupVjUsC2ANkH9v-cv7Ey1fnEO1Ar17ztvPc3qxUY8edr_U0wrlgMWl9NqZ0A1RavrwtIe6fuaoWH5sv4IywuQV2ZIpxDitS-ck6CcYxOr7.jpg')",
+      backgroundSize:'cover',
+      backgroundPosition:'center center',
+      backgroundRepeat:'no-repeat',
+      boxShadow:'0 10px 24px rgba(37,99,235,.18)',
+      display:'flex',
+      alignItems:'center',
+      justifyContent:'center',
+      padding:'20px',
+      overflow:'hidden'
+    }},
+      el('h1',{cls:'fd',style:{
+        fontSize:'clamp(56px, 13vw, 82px)',
+        lineHeight:'1',
+        color:'#ffffff',
+        textAlign:'center',
+        textShadow:'0 4px 18px rgba(15,23,42,.45)'
+      }},'PADELIN')
+    )
+  )
 
   // step indicator
   const sr=el('div',{style:{display:'flex',alignItems:'center',gap:'6px',marginBottom:'16px'}})
@@ -319,15 +413,29 @@ function vSetup(){
 
   if(S.step===0){
     card.appendChild(el('div',{style:{marginBottom:'16px'}},
-      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Choose Game Mode'),
-      el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'4px'}},'Select the tournament format')
+      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Choose Game Mode')
     ))
-    const row=el('div',{style:{display:'flex',gap:'12px'}})
+    card.appendChild(el('div',{style:{marginBottom:'16px'}},
+      el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'8px'}},'Game Name'),
+      el('input',{
+        cls:'ti',
+        type:'text',
+        placeholder:'Enter padel game name',
+        value:S.gameName??'',
+        onInput:e=>{
+          S.gameName=e.target.value
+          saveState()
+        }
+      })
+    ))
+    const row=el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}})
     ;[
-      {id:'americano',label:'Americano',ic:'zap',desc:'Any player can partner with anyone. Random pairings.',c:'b'},
-      {id:'mexicano',label:'Mexicano',ic:'trophy',desc:'Winners pair with winners. Ranking-based pairings.',c:'y'},
+      {id:'americano',label:'Americano',ic:'zap',desc:'Pair with everyone',c:'b',fixedId:'fixed_americano',fixedLabel:'Fixed Team Americano'},
+      {id:'mexicano',label:'Mexicano',ic:'trophy',desc:'Winners pairing',c:'y',fixedId:'fixed_mexicano',fixedLabel:'Fixed Team Mexicano'},
     ].forEach(m=>{
       const active=S.mode===m.id
+      const fixedActive=S.mode===m.fixedId
+      const col=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px',minWidth:'0'}})
       const mc=el('div',{cls:`mode-card ${active?'mc-'+m.c:''}`,onClick:()=>{S.mode=m.id;render()}})
       const ic=svg(m.ic,28);ic.style.color=m.c==='b'?'var(--primary)':'var(--secondary)'
       if(active){
@@ -336,15 +444,20 @@ function vSetup(){
         mc.appendChild(chk)
       }
       mc.append(ic,el('div',{},el('p',{cls:'fd',style:{fontSize:'24px'}},m.label),el('p',{style:{fontSize:'11px',color:'var(--muted)',marginTop:'4px',lineHeight:'1.4'}},m.desc)))
-      row.appendChild(mc)
+      const fixedBtn=el('div',{
+        cls:`pill${fixedActive?` sel-${m.c}`:''}`,
+        style:{padding:'8px 10px',fontSize:'11px',textAlign:'center'},
+        onClick:()=>{S.mode=m.fixedId;render()}
+      },m.fixedLabel)
+      col.append(mc,fixedBtn)
+      row.appendChild(col)
     })
     card.appendChild(row)
   }
 
   if(S.step===1){
     card.appendChild(el('div',{style:{marginBottom:'16px'}},
-      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Courts & Players'),
-      el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'4px'}},'Odd numbers supported — players rotate sitting out fairly')
+      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Courts & Players')
     ))
 
     // courts
@@ -359,26 +472,35 @@ function vSetup(){
     })
     card.appendChild(cr)
 
+    const needsEvenTeams=S.mode==='fixed_americano'||S.mode==='fixed_mexicano'
     const minP=S.courts*4
     card.appendChild(el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}},'Number of Players'))
-    card.appendChild(el('p',{style:{fontSize:'12px',color:'var(--muted)',marginBottom:'10px'}},`Min ${minP}. Any number works — extra players rotate out each round.`))
 
     // stepper
-    const stepper=el('div',{style:{display:'flex',alignItems:'center',gap:'12px',marginBottom:'12px'}})
+    const stepper=el('div',{style:{display:'flex',alignItems:'center',gap:'12px',marginBottom:'16px',flexWrap:'wrap'}})
     const btnM=el('button',{cls:'btn btn-sec btn-sm',style:{width:'36px',height:'36px',padding:'0',flexShrink:'0'},onClick:()=>{
-      if(S.playerCount>minP){S.playerCount--;render()}
-    }},'−')
+      if(S.playerCount>minP){
+        S.playerCount--
+        if(needsEvenTeams&&S.playerCount%2!==0&&S.playerCount>minP)S.playerCount--
+        render()
+      }
+    }},'-')
     const cntEl=el('div',{cls:'fd',style:{fontSize:'40px',minWidth:'50px',textAlign:'center'}},String(S.playerCount))
-    const btnP=el('button',{cls:'btn btn-sec btn-sm',style:{width:'36px',height:'36px',padding:'0',flexShrink:'0'},onClick:()=>{S.playerCount++;render()}},'+')
-    stepper.append(btnM,cntEl,btnP)
-    card.appendChild(stepper)
-
-    // presets
-    const pr=el('div',{style:{display:'flex',gap:'6px',flexWrap:'wrap',marginBottom:'16px'}})
-    ;[4,5,6,7,8,9,10,12].filter(n=>n>=minP).forEach(n=>{
-      pr.appendChild(el('div',{cls:`pill${S.playerCount===n?' sel-b':''}`,onClick:()=>{S.playerCount=n;render()}},String(n)))
+    const btnP=el('button',{cls:'btn btn-sec btn-sm',style:{width:'36px',height:'36px',padding:'0',flexShrink:'0'},onClick:()=>{
+      S.playerCount++
+      if(needsEvenTeams&&S.playerCount%2!==0)S.playerCount++
+      render()
+    }},'+')
+    const pr=el('div',{style:{display:'flex',gap:'4px',flexWrap:'wrap',alignItems:'center'}})
+    ;[4,5,6,7,8,9,10,12].filter(n=>n>=minP&&(!needsEvenTeams||n%2===0)).forEach(n=>{
+      pr.appendChild(el('div',{
+        cls:`pill${S.playerCount===n?' sel-b':''}`,
+        style:{padding:'4px 8px',fontSize:'11px',borderRadius:'8px'},
+        onClick:()=>{S.playerCount=n;render()}
+      },String(n)))
     })
-    card.appendChild(pr)
+    stepper.append(btnM,cntEl,btnP,pr)
+    card.appendChild(stepper)
 
     card.appendChild(el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'8px'}},'Player Names'))
     const namesWrap=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px',maxHeight:'240px',overflowY:'auto',paddingRight:'4px'}})
@@ -396,13 +518,12 @@ function vSetup(){
 
   if(S.step===2){
     card.appendChild(el('div',{style:{marginBottom:'16px'}},
-      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Scoring System'),
-      el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'4px'}},'How points are counted each match')
+      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Scoring System')
     ))
     const opts=[
-      {id:'total16',label:'Total 16',sub:'Team A + Team B = 16 per match',sc:'b',rc:'rd-b'},
-      {id:'total21',label:'Total 21',sub:'Team A + Team B = 21 per match',sc:'y',rc:'rd-y'},
-      {id:'tennis',label:'Tennis Sets',sub:'Best of sets — enter each set score',sc:'o',rc:'rd-o'},
+      {id:'total16',label:'Total 16',sub:'',sc:'b',rc:'rd-b'},
+      {id:'total21',label:'Total 21',sub:'',sc:'y',rc:'rd-y'},
+      {id:'tennis',label:'Tennis Sets',sub:'Enter each set score',sc:'o',rc:'rd-o'},
     ]
     const ow=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px'}})
     opts.forEach(o=>{
@@ -415,7 +536,8 @@ function vSetup(){
     card.appendChild(ow)
   }
 
-  const canNext=S.step===0?!!S.mode:S.step===1?S.playerCount>=S.courts*4:!!S.scoreMode
+  const fixedMode=S.mode==='fixed_americano'||S.mode==='fixed_mexicano'
+  const canNext=S.step===0?!!S.mode:S.step===1?(S.playerCount>=S.courts*4&&(!fixedMode||S.playerCount%2===0)):!!S.scoreMode
   const nav=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:'24px'}})
   const back=el('button',{cls:'btn btn-ghost btn-md',disabled:S.step===0,onClick:()=>{S.step--;render()}},svg('cl',16),'Back')
   if(S.step<2){
@@ -425,22 +547,32 @@ function vSetup(){
   }
   card.appendChild(nav)
   wrap.appendChild(card)
+  if(S.step===0){
+    wrap.appendChild(el('p',{cls:'fd',style:{fontSize:'18px',color:'var(--primary)',marginTop:'16px',letterSpacing:'.08em',textAlign:'center'}},'PADEL SCORE TRACKER'))
+  }
   return wrap
 }
 
-// ─ PLAYING ───────────────────────────────────────────────────────────────────
+// - PLAYING -------------------------------------------------------------------
 function vPlaying(){
   const wrap=el('div',{style:{minHeight:'100vh',display:'flex',flexDirection:'column'}})
 
-  const modeL=S.mode==='americano'?'Americano':'Mexicano'
+  const modeCfg=modeMeta(S.mode)
+  const modeL=modeCfg.label
   const scoreL=S.scoreMode==='total16'?'T16':S.scoreMode==='total21'?'T21':'Tennis'
   const hdr=el('div',{cls:'hdr'})
-  const hl=el('div',{style:{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}})
-  hl.append(el('span',{cls:'fd',style:{fontSize:'20px',color:'var(--primary)'}},'PADELIN'),badge(modeL,S.mode==='americano'?'blue':'yellow'),badge(scoreL,S.scoreMode==='total16'?'blue':S.scoreMode==='total21'?'yellow':'orange'),badge(`Round ${S.round}`,'muted'))
+  const hl=el('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-start',gap:'6px',minWidth:'0'}})
+  hl.append(
+    el('span',{cls:'fd',style:{fontSize:'20px',color:'var(--primary)'}},'PADELIN'),
+    el('div',{style:{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap'}},
+      badge(modeL,modeCfg.color),
+      badge(scoreL,S.scoreMode==='total16'?'blue':S.scoreMode==='total21'?'yellow':'orange'),
+      badge(`Round ${S.round}`,'muted')
+    )
+  )
   
-  const hr=el('div',{style:{display:'flex',gap:'8px'}})
+  const hr=el('div',{style:{display:'flex',gap:'8px',marginLeft:'auto',justifyContent:'flex-end',flexWrap:'wrap'}})
   hr.append(
-    // Tombol Home
     el('button',{cls:'btn btn-sec btn-sm',onClick:()=>{
       if(confirm('Yakin ingin kembali ke awal? Progress turnamen ini akan dibuang.')){
         localStorage.removeItem('padelin_state');
@@ -448,7 +580,7 @@ function vPlaying(){
         render();
       }
     }},svg('cl',14), 'Home'),
-    el('button',{cls:'btn btn-ghost btn-sm',onClick:()=>{S.editing=true;render()}},svg('edit',14)),
+    el('button',{cls:'btn btn-ghost btn-sm',onClick:()=>{S.editing=true;render()}},svg('edit',14),'Edit'),
     el('button',{cls:'btn btn-danger btn-sm',onClick:()=>{
       if(confirm('Akhiri turnamen sekarang dan lihat klasemen akhir?')){
         S.phase='finished';render();
@@ -464,56 +596,71 @@ function vPlaying(){
   if(S.current.length===0){
     const ec=el('div',{cls:'card',style:{textAlign:'center',marginTop:'32px',display:'flex',flexDirection:'column',gap:'16px',alignItems:'center'}})
     const ti=svg('trophy',40);ti.style.color='var(--primary)'
-    ec.append(ti,el('h2',{cls:'fd',style:{fontSize:'28px'}},'All players played equally!'),el('p',{style:{fontSize:'13px',color:'var(--muted)'}},'Great session — check the final standings.'),el('button',{cls:'btn btn-primary btn-lg w-full',onClick:()=>{S.phase='finished';render()}},svg('trophy',16),'See Final Standings'))
+    ec.append(ti,el('h2',{cls:'fd',style:{fontSize:'28px'}},'All players played equally!'),el('p',{style:{fontSize:'13px',color:'var(--muted)'}},'Great session - check the final standings.'),el('button',{cls:'btn btn-primary btn-lg w-full',onClick:()=>{S.phase='finished';render()}},svg('trophy',16),'See Final Standings'))
     main.appendChild(ec)
     main.appendChild(vStandings())
     wrap.appendChild(main);return wrap
   }
 
-  // Tombol Acak Ulang Ronde (Muncul di atas pertandingan)
-  main.appendChild(el('button', {
-    cls: 'btn btn-sec btn-md w-full',
-    style: {marginBottom: '0px'},
-    onClick: () => {
-      if(confirm('Acak ulang pemain dan rotasi istirahat di ronde ini?')) {
-        S.inputs = {};
-        S.current = genMatches(S.players, S.done, S.mode, S.round, S.courts);
-        render();
-      }
-    }
-  }, svg('restart', 14), 'Acak Ulang Formasi Ronde Ini'));
-
   const sitOutIds=S.current[0]?.sitOut||[]
   const playingIds=S.current.flatMap(m=>[...m.teamA,...m.teamB])
+  const tabs=el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}})
+  tabs.append(
+    el('button',{
+      cls:`btn ${S.activeTab==='match'?'btn-primary':'btn-sec'} btn-md`,
+      onClick:()=>{S.activeTab='match';render()}
+    },'Match'),
+    el('button',{
+      cls:`btn ${S.activeTab==='standings'?'btn-primary':'btn-sec'} btn-md`,
+      onClick:()=>{S.activeTab='standings';render()}
+    },'Standings')
+  )
+  main.appendChild(tabs)
 
-  S.current.forEach(m=>main.appendChild(vMatchCard(m)))
+  if(S.activeTab==='match'){
+    S.current.forEach(m=>main.appendChild(vMatchCard(m)))
 
-  if(sitOutIds.length>0){
-    const names=sitOutIds.map(id=>pn(S.players,id)).join(', ')
-    main.appendChild(el('p',{style:{textAlign:'center',fontSize:'12px',color:'var(--muted)'}},`😴 Sedang istirahat: ${names}`))
+    if(sitOutIds.length>0){
+      const names=sitOutIds.map(id=>pn(S.players,id)).join(', ')
+      main.appendChild(el('p',{style:{textAlign:'center',fontSize:'12px',color:'var(--muted)'}},`Resting: ${names}`))
+    }
+
+    const max=S.scoreMode==='total16'?16:21
+    const ready=S.current.every(m=>{
+      const inp=S.inputs[m.id]
+      if(!inp)return false
+      if(S.scoreMode==='tennis')return inp.sets&&inp.sets.length>0
+      const sa=parseInt(inp.scoreA,10), sb=parseInt(inp.scoreB,10)
+      return!isNaN(sa)&&!isNaN(sb)&&(sa+sb)===max
+    })
+    
+    main.appendChild(el('button',{id:'btn-submit', cls:'btn btn-primary btn-lg w-full',disabled:!ready,onClick:submitRound},svg('check',16),`Submit Round ${S.round}`))
+  }else{
+    main.appendChild(vStandings(playingIds))
+    main.appendChild(vHistory())
   }
 
-  const max=S.scoreMode==='total16'?16:21
-  const ready=S.current.every(m=>{
-    const inp=S.inputs[m.id]
-    if(!inp)return false
-    if(S.scoreMode==='tennis')return inp.sets&&inp.sets.length>0
-    const sa=parseInt(inp.scoreA,10), sb=parseInt(inp.scoreB,10)
-    return!isNaN(sa)&&!isNaN(sb)&&(sa+sb)===max
-  })
-  
-  main.appendChild(el('button',{id:'btn-submit', cls:'btn btn-primary btn-lg w-full',disabled:!ready,onClick:submitRound},svg('check',16),`Submit Round ${S.round}`))
-  main.appendChild(vStandings(playingIds))
-  main.appendChild(vHistory())
   wrap.appendChild(main);return wrap
 }
 
 function vMatchCard(match){
   const card=el('div',{cls:'card glow',style:{display:'flex',flexDirection:'column',gap:'16px'}})
   card.append(
-    el('div',{},
-      el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px'}},`Court ${match.courtNumber}`),
-      el('h2',{cls:'fd',style:{fontSize:'28px',color:'var(--primary)'}},'Now Playing')
+    el('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'12px'}},
+      el('div',{},
+        el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px'}},`Court ${match.courtNumber}`),
+        el('h2',{cls:'fd',style:{fontSize:'28px',color:'var(--primary)'}},'Now Playing')
+      ),
+      el('button',{
+        cls:'btn btn-sec btn-sm',
+        onClick:()=>{
+          if(confirm('Acak ulang pemain dan rotasi istirahat di ronde ini?')) {
+            S.inputs = {};
+            S.current = genMatches(S.players, S.done, S.mode, S.round, S.courts);
+            render();
+          }
+        }
+      },svg('restart',14),'Re Roll')
     )
   )
   const teams=el('div',{style:{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:'12px',alignItems:'center'}})
@@ -538,7 +685,7 @@ function vScoreInput(match){
         const row=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface-3)',borderRadius:'12px',padding:'10px 14px'}})
         const sc=el('span',{cls:'fd',style:{fontSize:'24px'}})
         sc.appendChild(el('span',{style:{color:s.a>s.b?'var(--primary)':'var(--muted)'}},String(s.a)))
-        sc.appendChild(document.createTextNode(' — '))
+        sc.appendChild(document.createTextNode(' - '))
         sc.appendChild(el('span',{style:{color:s.b>s.a?'var(--primary)':'var(--muted)'}},String(s.b)))
         const del=el('button',{cls:'btn btn-ghost btn-sm',style:{padding:'4px'},onClick:()=>{
           if(!S.inputs[match.id])S.inputs[match.id]={scoreA:'',sets:[]}
@@ -549,7 +696,7 @@ function vScoreInput(match){
       })
       const sA=inp.sets.filter(s=>s.a>s.b).length,sB=inp.sets.filter(s=>s.b>s.a).length
       const sr=el('p',{style:{textAlign:'center',fontSize:'12px',color:'var(--muted)'}})
-      sr.append(el('span',{style:{color:'var(--primary)',fontWeight:'700'}},String(sA)),' – ',el('span',{style:{color:'var(--secondary)',fontWeight:'700'}},String(sB)),' sets')
+      sr.append(el('span',{style:{color:'var(--primary)',fontWeight:'700'}},String(sA)),' - ',el('span',{style:{color:'var(--secondary)',fontWeight:'700'}},String(sB)),' sets')
       sw.appendChild(sr);wrap.appendChild(sw)
     }
     let tA='',tB=''
@@ -562,7 +709,7 @@ function vScoreInput(match){
         S.inputs[match.id].sets=[...(S.inputs[match.id].sets||[]),{a,b}];render()
       }
     }},svg('plus',14),'Add Set')
-    wrap.appendChild(el('div',{style:{display:'flex',alignItems:'center',gap:'8px',justifyContent:'center'}},iA,el('span',{style:{color:'var(--muted)'}},'–'),iB,addBtn))
+    wrap.appendChild(el('div',{style:{display:'flex',alignItems:'center',gap:'8px',justifyContent:'center'}},iA,el('span',{style:{color:'var(--muted)'}},'-'),iB,addBtn))
     return wrap
   }
   
@@ -631,7 +778,7 @@ function vScoreInput(match){
     inpB
   )
   row.append(colA,el('div',{cls:'fd',style:{fontSize:'22px',color:'var(--muted)',paddingTop:'24px'}},'vs'),colB)
-  wrap.append(row,el('p',{style:{fontSize:'11px',color:'var(--muted)'}},`Max total: ${max} pts · Input otomatis`))
+  wrap.append(row,el('p',{style:{fontSize:'11px',color:'var(--muted)'}},`Max total: ${max} pts`))
   return wrap
 }
 
@@ -722,9 +869,10 @@ function vEditModal(){
   bg.appendChild(card);return bg
 }
 
-// ─ FINISHED ──────────────────────────────────────────────────────────────────
+// - FINISHED ------------------------------------------------------------------
 function vFinished(){
   const r=ranked(S.players),w=r[0]
+  const modeCfg=modeMeta(S.mode)
   let showAll=false
   const wrap=el('div',{style:{minHeight:'100vh',display:'flex',flexDirection:'column'}})
 
@@ -732,8 +880,8 @@ function vFinished(){
   const hero=el('div',{style:{textAlign:'center',padding:'48px 16px 32px',background:'linear-gradient(to bottom,var(--primary-bg),transparent)'}})
   const ring=el('div',{cls:'winner-ring'});const ci=svg('crown',36);ci.style.color='var(--primary)';ring.appendChild(ci)
   hero.append(ring,badge('Tournament Complete','yellow'),el('h1',{cls:'fd',style:{fontSize:'clamp(40px,10vw,72px)',lineHeight:'1',marginTop:'12px'}},w?.name||''),
-    el('p',{style:{fontSize:'15px',color:'var(--text)',marginTop:'8px'}},`${w?.wins} wins · ${w?.points} points · ${S.done.length} matches`),
-    (()=>{const row=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',marginTop:'12px',flexWrap:'wrap'}});row.append(badge(S.mode,'blue'),badge(S.scoreMode==='tennis'?'Tennis':S.scoreMode==='total16'?'Total 16':'Total 21','muted'),badge(`${S.players.length} players`,'muted'));return row})()
+    el('p',{style:{fontSize:'15px',color:'var(--text)',marginTop:'8px'}},`${w?.wins} wins * ${w?.points} points * ${S.done.length} matches`),
+    (()=>{const row=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',marginTop:'12px',flexWrap:'wrap'}});row.append(badge(modeCfg.label,modeCfg.color),badge(S.scoreMode==='tennis'?'Tennis':S.scoreMode==='total16'?'Total 16':'Total 21','muted'),badge(`${S.players.length} players`,'muted'));return row})()
   )
   wrap.appendChild(hero)
 
@@ -743,12 +891,16 @@ function vFinished(){
   if(r.length>=3){
     const pod=el('div',{style:{display:'flex',alignItems:'flex-end',gap:'8px',height:'130px'}})
     const order=[r[1],r[0],r[2]]
-    const heights=['80px','120px','60px'],colors=['#94a3b8','var(--primary)','#ea580c'],labels=['🥈','🥇','🥉']
+    const heights=['80px','120px','60px'],backgrounds=[
+      'linear-gradient(135deg,#94a3b8,#cbd5e1)',
+      'linear-gradient(135deg,#2563eb,#60a5fa)',
+      'linear-gradient(135deg,#ea580c,#fb923c)'
+    ],labels=['2nd','1st','3rd']
     order.forEach((p,i)=>{
       const item=el('div',{style:{flex:'1',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end'}})
       item.append(el('p',{style:{fontSize:'12px',fontWeight:'600',textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',width:'100%',marginBottom:'4px'}},p?.name||''),
-        el('p',{style:{fontSize:'11px',color:'var(--text)',textAlign:'center',marginBottom:'4px'}},`${p?.wins}W · ${p?.points}pts`),
-        el('div',{cls:'pod-bar',style:{height:heights[i],background:`linear-gradient(135deg,${colors[i]},${colors[i]}99)`,color:i===1?'var(--dark-text)':'#fff'}},el('span',{style:{fontSize:'20px'}},labels[i]))
+        el('p',{style:{fontSize:'11px',color:'var(--text)',textAlign:'center',marginBottom:'4px'}},`${p?.wins}W * ${p?.points}pts`),
+        el('div',{cls:'pod-bar',style:{height:heights[i],background:backgrounds[i],color:'#fff'}},el('span',{style:{fontSize:'20px'}},labels[i]))
       )
       pod.appendChild(item)
     })
@@ -783,11 +935,12 @@ function vFinished(){
   wrap.appendChild(main);return wrap
 }
 
-// ── actions ───────────────────────────────────────────────────────────────────
+// -- actions -------------------------------------------------------------------
 function startGame(){
   const names=S.playerNames.slice(0,S.playerCount)
   S.players=shuf(names.map((n,i)=>mkPlayer(n||`Player ${i+1}`)))
   S.done=[];S.round=1;S.inputs={}
+  S.activeTab='match'
   S.current=genMatches(S.players,[],S.mode,1,S.courts)
   S.phase='playing';render()
 }
