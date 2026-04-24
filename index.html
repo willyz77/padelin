@@ -298,15 +298,14 @@ function render(){
 function vSetup(){
   const wrap=el('div',{style:{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',padding:'16px 16px 48px'}})
 
-  // Mini logo for pages 2 & 3
-  if(S.step>0){
-    const logoRow=el('div',{style:{width:'100%',maxWidth:'480px',display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px',marginTop:'4px'}})
-    logoRow.appendChild(el('span',{cls:'fd',style:{fontSize:'22px',color:'var(--primary)'}},'PADELIN'))
-    wrap.appendChild(logoRow)
-  }
+  wrap.appendChild(el('div',{style:{paddingTop:'16px',marginBottom:'16px',textAlign:'center'}},
+    el('h1',{cls:'fd',style:{fontSize:'60px',lineHeight:'1',color:'var(--text)'}},'PADELIN'),
+    el('p',{cls:'fd',style:{fontSize:'18px',color:'var(--primary)',marginTop:'-2px',letterSpacing:'.08em'}},'PADEL SCORE TRACKER'),
+    el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'6px',fontWeight:'500'}},'Welcome to PADELIN \u2014 ready to play some padel? \uD83C\uDFBE')
+  ))
 
   // step indicator
-  const sr=el('div',{style:{display:'flex',alignItems:'center',gap:'6px',marginBottom:'16px',marginTop:'8px'}})
+  const sr=el('div',{style:{display:'flex',alignItems:'center',gap:'6px',marginBottom:'16px'}})
   ;['Mode','Players','Scoring'].forEach((lbl,i)=>{
     const cls=i<S.step?'sdot-done':i===S.step?'sdot-active':'sdot-pending'
     const dot=el('div',{cls:`sdot ${cls}`},i<S.step?svg('check',12):String(i+1))
@@ -320,7 +319,8 @@ function vSetup(){
 
   if(S.step===0){
     card.appendChild(el('div',{style:{marginBottom:'16px'}},
-      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Choose Game Mode')
+      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Choose Game Mode'),
+      el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'4px'}},'Select the tournament format')
     ))
     const row=el('div',{style:{display:'flex',gap:'12px'}})
     ;[
@@ -343,7 +343,8 @@ function vSetup(){
 
   if(S.step===1){
     card.appendChild(el('div',{style:{marginBottom:'16px'}},
-      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Courts & Players')
+      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Courts & Players'),
+      el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'4px'}},'Odd numbers supported — players rotate sitting out fairly')
     ))
 
     // courts
@@ -359,7 +360,8 @@ function vSetup(){
     card.appendChild(cr)
 
     const minP=S.courts*4
-    card.appendChild(el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'10px'}},'Number of Players'))
+    card.appendChild(el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}},'Number of Players'))
+    card.appendChild(el('p',{style:{fontSize:'12px',color:'var(--muted)',marginBottom:'10px'}},`Min ${minP}. Any number works — extra players rotate out each round.`))
 
     // stepper
     const stepper=el('div',{style:{display:'flex',alignItems:'center',gap:'12px',marginBottom:'12px'}})
@@ -394,7 +396,8 @@ function vSetup(){
 
   if(S.step===2){
     card.appendChild(el('div',{style:{marginBottom:'16px'}},
-      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Scoring System')
+      el('h2',{cls:'fd',style:{fontSize:'32px'}},'Scoring System'),
+      el('p',{style:{fontSize:'13px',color:'var(--muted)',marginTop:'4px'}},'How points are counted each match')
     ))
     const opts=[
       {id:'total16',label:'Total 16',sub:'Team A + Team B = 16 per match',sc:'b',rc:'rd-b'},
@@ -422,13 +425,6 @@ function vSetup(){
   }
   card.appendChild(nav)
   wrap.appendChild(card)
-  // PADEL SCORE TRACKER + tagline below card (page 1 only)
-  if(S.step===0){
-    wrap.appendChild(el('div',{style:{textAlign:'center',marginTop:'16px'}},
-      el('p',{cls:'fd',style:{fontSize:'13px',color:'var(--muted)',letterSpacing:'.1em'}},'PADEL SCORE TRACKER'),
-      el('p',{style:{fontSize:'12px',color:'var(--muted)',marginTop:'2px'}},'Ready to play some padel? 🎾')
-    ))
-  }
   return wrap
 }
 
@@ -438,29 +434,27 @@ function vPlaying(){
 
   const modeL=S.mode==='americano'?'Americano':'Mexicano'
   const scoreL=S.scoreMode==='total16'?'T16':S.scoreMode==='total21'?'T21':'Tennis'
-  const hdr=el('div',{cls:'hdr',style:{padding:'10px 16px'}})
-  // Left: PADELIN big, then badges below
-  const hl=el('div',{style:{display:'flex',flexDirection:'column',gap:'3px'}})
-  hl.appendChild(el('span',{cls:'fd',style:{fontSize:'22px',lineHeight:'1',color:'var(--primary)'}},'PADELIN'))
-  const badgeRow=el('div',{style:{display:'flex',alignItems:'center',gap:'6px'}})
-  badgeRow.append(badge(modeL,S.mode==='americano'?'blue':'yellow'),badge(scoreL,S.scoreMode==='total16'?'blue':S.scoreMode==='total21'?'yellow':'orange'),badge(`Round ${S.round}`,'muted'))
-  hl.appendChild(badgeRow)
-
-  // Right: icon-only buttons, clean
-  const hr=el('div',{style:{display:'flex',gap:'6px',alignItems:'center'}})
-  const homeBtn=el('button',{cls:'btn btn-ghost btn-sm',style:{padding:'8px'},title:'Home',onClick:()=>{
-    if(confirm('Go back to start? Tournament progress will be lost.')){
-      localStorage.removeItem('padelin_state');
-      S=JSON.parse(JSON.stringify(defaultState));
-      render();
-    }
-  }},svg('cl',16))
-  const editBtn=el('button',{cls:'btn btn-ghost btn-sm',style:{padding:'8px'},title:'Edit Names',onClick:()=>{S.editing=true;render()}},svg('edit',16))
-  const endBtn=el('button',{cls:'btn btn-danger btn-sm',style:{padding:'8px'},title:'End Tournament',onClick:()=>{
-    if(confirm('End tournament and see final standings?')){S.phase='finished';render()}
-  }},svg('trophy',16))
-  hr.append(homeBtn,editBtn,endBtn)
-
+  const hdr=el('div',{cls:'hdr'})
+  const hl=el('div',{style:{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}})
+  hl.append(el('span',{cls:'fd',style:{fontSize:'20px',color:'var(--primary)'}},'PADELIN'),badge(modeL,S.mode==='americano'?'blue':'yellow'),badge(scoreL,S.scoreMode==='total16'?'blue':S.scoreMode==='total21'?'yellow':'orange'),badge(`Round ${S.round}`,'muted'))
+  
+  const hr=el('div',{style:{display:'flex',gap:'8px'}})
+  hr.append(
+    // Tombol Home
+    el('button',{cls:'btn btn-sec btn-sm',onClick:()=>{
+      if(confirm('Yakin ingin kembali ke awal? Progress turnamen ini akan dibuang.')){
+        localStorage.removeItem('padelin_state');
+        S=JSON.parse(JSON.stringify(defaultState));
+        render();
+      }
+    }},svg('cl',14), 'Home'),
+    el('button',{cls:'btn btn-ghost btn-sm',onClick:()=>{S.editing=true;render()}},svg('edit',14)),
+    el('button',{cls:'btn btn-danger btn-sm',onClick:()=>{
+      if(confirm('Akhiri turnamen sekarang dan lihat klasemen akhir?')){
+        S.phase='finished';render();
+      }
+    }},svg('trophy',14),'End')
+  )
   hdr.append(hl,hr);wrap.appendChild(hdr)
 
   if(S.editing)wrap.appendChild(vEditModal())
@@ -476,7 +470,18 @@ function vPlaying(){
     wrap.appendChild(main);return wrap
   }
 
-  // Re-roll button moved inside match card header
+  // Tombol Acak Ulang Ronde (Muncul di atas pertandingan)
+  main.appendChild(el('button', {
+    cls: 'btn btn-sec btn-md w-full',
+    style: {marginBottom: '0px'},
+    onClick: () => {
+      if(confirm('Acak ulang pemain dan rotasi istirahat di ronde ini?')) {
+        S.inputs = {};
+        S.current = genMatches(S.players, S.done, S.mode, S.round, S.courts);
+        render();
+      }
+    }
+  }, svg('restart', 14), 'Acak Ulang Formasi Ronde Ini'));
 
   const sitOutIds=S.current[0]?.sitOut||[]
   const playingIds=S.current.flatMap(m=>[...m.teamA,...m.teamB])
@@ -505,25 +510,12 @@ function vPlaying(){
 
 function vMatchCard(match){
   const card=el('div',{cls:'card glow',style:{display:'flex',flexDirection:'column',gap:'16px'}})
-  const cardHeader=el('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between'}})
-  const cardHeaderLeft=el('div',{},
-    el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px'}},`Court ${match.courtNumber}`),
-    el('h2',{cls:'fd',style:{fontSize:'28px',color:'var(--primary)'}},'Now Playing')
+  card.append(
+    el('div',{},
+      el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px'}},`Court ${match.courtNumber}`),
+      el('h2',{cls:'fd',style:{fontSize:'28px',color:'var(--primary)'}},'Now Playing')
+    )
   )
-  const rerollBtn=el('button',{
-    cls:'btn btn-sec btn-sm',
-    style:{marginTop:'2px'},
-    title:'Re-roll this round',
-    onClick:()=>{
-      if(confirm('Re-roll players for this round?')){
-        S.inputs={};
-        S.current=genMatches(S.players,S.done,S.mode,S.round,S.courts);
-        render();
-      }
-    }
-  },svg('restart',14),'Re-roll')
-  cardHeader.append(cardHeaderLeft,rerollBtn)
-  card.appendChild(cardHeader)
   const teams=el('div',{style:{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:'12px',alignItems:'center'}})
   const ca=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px'}})
   const cb=el('div',{style:{display:'flex',flexDirection:'column',gap:'8px'}})
