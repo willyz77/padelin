@@ -377,7 +377,7 @@ function vSetup(){
       height:'128px',
       borderRadius:'16px',
       marginBottom:'16px',
-      backgroundImage:"linear-gradient(rgba(15,23,42,.22),rgba(15,23,42,.22)), url('/images/padel-header.jpg')",
+      backgroundImage:"linear-gradient(rgba(15,23,42,.22),rgba(15,23,42,.22)), url('images/padel-header.jpg')",
       backgroundSize:'cover',
       backgroundPosition:'center center',
       backgroundRepeat:'no-repeat',
@@ -649,7 +649,7 @@ function vMatchCard(match){
     el('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'12px'}},
       el('div',{},
         el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px'}},`Court ${match.courtNumber}`),
-        el('h2',{cls:'fd',style:{fontSize:'28px',color:'var(--primary)'}},'Now Playing')
+        el('h2',{cls:'fd',style:{fontSize:'28px',color:'var(--primary)'}},'ON COURT')
       ),
       el('button',{
         cls:'btn btn-sec btn-sm',
@@ -880,32 +880,11 @@ function vFinished(){
   const hero=el('div',{style:{textAlign:'center',padding:'48px 16px 32px',background:'linear-gradient(to bottom,var(--primary-bg),transparent)'}})
   const ring=el('div',{cls:'winner-ring'});const ci=svg('crown',36);ci.style.color='var(--primary)';ring.appendChild(ci)
   hero.append(ring,badge('Tournament Complete','yellow'),el('h1',{cls:'fd',style:{fontSize:'clamp(40px,10vw,72px)',lineHeight:'1',marginTop:'12px'}},w?.name||''),
-    el('p',{style:{fontSize:'15px',color:'var(--text)',marginTop:'8px'}},`${w?.wins} wins * ${w?.points} points * ${S.done.length} matches`),
     (()=>{const row=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',marginTop:'12px',flexWrap:'wrap'}});row.append(badge(modeCfg.label,modeCfg.color),badge(S.scoreMode==='tennis'?'Tennis':S.scoreMode==='total16'?'Total 16':'Total 21','muted'),badge(`${S.players.length} players`,'muted'));return row})()
   )
   wrap.appendChild(hero)
 
   const main=el('div',{style:{padding:'16px',maxWidth:'512px',margin:'0 auto',width:'100%',paddingBottom:'48px',display:'flex',flexDirection:'column',gap:'16px'}})
-
-  // podium
-  if(r.length>=3){
-    const pod=el('div',{style:{display:'flex',alignItems:'flex-end',gap:'8px',height:'130px'}})
-    const order=[r[1],r[0],r[2]]
-    const heights=['80px','120px','60px'],backgrounds=[
-      'linear-gradient(135deg,#94a3b8,#cbd5e1)',
-      'linear-gradient(135deg,#2563eb,#60a5fa)',
-      'linear-gradient(135deg,#ea580c,#fb923c)'
-    ],labels=['2nd','1st','3rd']
-    order.forEach((p,i)=>{
-      const item=el('div',{style:{flex:'1',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end'}})
-      item.append(el('p',{style:{fontSize:'12px',fontWeight:'600',textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',width:'100%',marginBottom:'4px'}},p?.name||''),
-        el('p',{style:{fontSize:'11px',color:'var(--text)',textAlign:'center',marginBottom:'4px'}},`${p?.wins}W * ${p?.points}pts`),
-        el('div',{cls:'pod-bar',style:{height:heights[i],background:backgrounds[i],color:'#fff'}},el('span',{style:{fontSize:'20px'}},labels[i]))
-      )
-      pod.appendChild(item)
-    })
-    main.appendChild(pod)
-  }
 
   main.appendChild(vStandings())
 
