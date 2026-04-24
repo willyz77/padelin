@@ -377,7 +377,7 @@ function vSetup(){
       height:'128px',
       borderRadius:'16px',
       marginBottom:'16px',
-      backgroundImage:"linear-gradient(rgba(15,23,42,.22),rgba(15,23,42,.22)), url('./images/padel-header.jpg')",
+      backgroundImage:"linear-gradient(rgba(15,23,42,.22),rgba(15,23,42,.22)), url('/images/padel-header.jpg')",
       backgroundSize:'cover',
       backgroundPosition:'center center',
       backgroundRepeat:'no-repeat',
@@ -477,7 +477,7 @@ function vSetup(){
     card.appendChild(el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'4px'}},'Number of Players'))
 
     // stepper
-    const stepper=el('div',{style:{display:'flex',alignItems:'center',gap:'12px',marginBottom:'16px',flexWrap:'wrap'}})
+    const stepper=el('div',{style:{display:'flex',alignItems:'center',gap:'12px',marginBottom:'16px',flexWrap:'nowrap'}})
     const btnM=el('button',{cls:'btn btn-sec btn-sm',style:{width:'36px',height:'36px',padding:'0',flexShrink:'0'},onClick:()=>{
       if(S.playerCount>minP){
         S.playerCount--
@@ -491,7 +491,7 @@ function vSetup(){
       if(needsEvenTeams&&S.playerCount%2!==0)S.playerCount++
       render()
     }},'+')
-    const pr=el('div',{style:{display:'flex',gap:'4px',flexWrap:'wrap',alignItems:'center'}})
+    const pr=el('div',{style:{display:'grid',gridTemplateRows:'repeat(2,auto)',gridAutoFlow:'column',gap:'4px',alignItems:'center',justifyContent:'start'}})
     ;[4,5,6,7,8,9,10,12].filter(n=>n>=minP&&(!needsEvenTeams||n%2===0)).forEach(n=>{
       pr.appendChild(el('div',{
         cls:`pill${S.playerCount===n?' sel-b':''}`,
