@@ -124,6 +124,9 @@ table.st{width:100%;border-collapse:collapse;font-size:13px}
 </head>
 <body>
 <div id="root"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 // -- helpers ------------------------------------------------------------------
 const uuid=()=>crypto.randomUUID()
@@ -325,6 +328,7 @@ const defaultState = {
   playerCount:8,playerNames:Array(24).fill(''),
   players:[],done:[],current:[],round:1,
   inputs:{},showHist:false,editing:false,activeTab:'match',
+  user:null,cloudMessage:'',activeCloudId:null,
 };
 
 let S;
@@ -337,6 +341,161 @@ try {
 if(!S.activeTab)S.activeTab='match'
 
 const saveState = () => localStorage.setItem('padelin_state', JSON.stringify(S));
+const firebaseConfig = {
+  apiKey: "AIzaSyCFWGCQTDU1wat7cutVNQReoVMEnviGa1A",
+  authDomain: "padelin-33ff7.firebaseapp.com",
+  projectId: "padelin-33ff7",
+  storageBucket: "padelin-33ff7.firebasestorage.app",
+  messagingSenderId: "489717587778",
+  appId: "1:489717587778:web:2b0e6be6e29574e97472db",
+  measurementId: "G-B8X51BQ8YW"
+};
+
+let firebaseApp=null
+let auth=null
+let db=null
+let firebaseReady=false
+
+function setCloudMessage(msg){
+  S.cloudMessage=msg
+  render()
+}
+
+function canUseGoogleAuth(){
+  return location.protocol==='http:'||location.protocol==='https:'
+}
+
+function initFirebase(){
+  if(!window.firebase)return
+  if(!firebase.apps.length)firebaseApp=firebase.initializeApp(firebaseConfig)
+  else firebaseApp=firebase.app()
+  auth=firebase.auth()
+  db=firebase.firestore()
+  firebaseReady=true
+  auth.onAuthStateChanged(user=>{
+    S.user=user?{
+      uid:user.uid,
+      name:user.displayName||user.email||'Player',
+      email:user.email||'',
+      photoURL:user.photoURL||''
+    }:null
+    if(!user){
+      S.activeCloudId=null
+      S.cloudMessage=''
+    }
+    render()
+  })
+}
+
+function cloudTournamentPayload(){
+  return {
+    gameName:S.gameName||'Padel Tournament',
+    phase:S.phase,
+    step:S.step,
+    mode:S.mode,
+    scoreMode:S.scoreMode,
+    courts:S.courts,
+    playerCount:S.playerCount,
+    playerNames:[...S.playerNames],
+    players:JSON.parse(JSON.stringify(S.players)),
+    done:JSON.parse(JSON.stringify(S.done)),
+    current:JSON.parse(JSON.stringify(S.current)),
+    round:S.round,
+    inputs:JSON.parse(JSON.stringify(S.inputs)),
+    showHist:S.showHist,
+    editing:false,
+    activeTab:S.activeTab,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }
+}
+
+async function signInWithGoogle(){
+  if(!firebaseReady)return setCloudMessage('Firebase belum siap.')
+  if(!canUseGoogleAuth())return setCloudMessage('Google login perlu dibuka dari localhost atau domain web, bukan file langsung.')
+  try{
+    const provider=new firebase.auth.GoogleAuthProvider()
+    await auth.signInWithPopup(provider)
+    setCloudMessage('Login Google berhasil.')
+  }catch(err){
+    setCloudMessage(err?.message||'Login Google gagal.')
+  }
+}
+
+async function signOutGoogle(){
+  if(!auth)return
+  try{
+    await auth.signOut()
+  }catch(err){
+    setCloudMessage(err?.message||'Logout gagal.')
+  }
+}
+
+async function saveTournamentToCloud(){
+  if(!firebaseReady||!db||!S.user)return setCloudMessage('Login Google dulu untuk save.')
+  try{
+    setCloudMessage('Saving tournament...')
+    const ref=S.activeCloudId
+      ? db.collection('users').doc(S.user.uid).collection('tournaments').doc(S.activeCloudId)
+      : db.collection('users').doc(S.user.uid).collection('tournaments').doc()
+    await ref.set(cloudTournamentPayload(),{merge:true})
+    S.activeCloudId=ref.id
+    setCloudMessage('Tournament saved to cloud.')
+  }catch(err){
+    setCloudMessage(err?.message||'Save ke cloud gagal.')
+  }
+}
+
+async function loadLatestTournamentFromCloud(){
+  if(!firebaseReady||!db||!S.user)return setCloudMessage('Login Google dulu untuk load.')
+  try{
+    setCloudMessage('Loading latest tournament...')
+    const snap=await db.collection('users').doc(S.user.uid).collection('tournaments').orderBy('updatedAt','desc').limit(1).get()
+    if(snap.empty)return setCloudMessage('Belum ada tournament tersimpan di cloud.')
+    const doc=snap.docs[0]
+    const data=doc.data()
+    S={
+      ...JSON.parse(JSON.stringify(defaultState)),
+      ...data,
+      user:S.user,
+      activeCloudId:doc.id,
+      cloudMessage:'Tournament loaded from cloud.'
+    }
+    if(!S.activeTab)S.activeTab='match'
+    render()
+  }catch(err){
+    setCloudMessage(err?.message||'Load dari cloud gagal.')
+  }
+}
+
+function vCloudBar(){
+  const wrap=el('div',{cls:'card',style:{maxWidth:'480px',width:'100%',marginBottom:'16px',padding:'14px'}})
+  const top=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',flexWrap:'wrap'}})
+  const left=el('div',{style:{display:'flex',flexDirection:'column',gap:'4px'}})
+  left.append(
+    el('p',{style:{fontSize:'11px',fontWeight:'700',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px'}},'Cloud Save'),
+    el('p',{style:{fontSize:'13px',fontWeight:'600'}},S.user?S.user.name:'Not logged in')
+  )
+  if(S.user?.email)left.appendChild(el('p',{style:{fontSize:'12px',color:'var(--muted)'}},S.user.email))
+  const actions=el('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap'}})
+  if(S.user){
+    actions.append(
+      el('button',{cls:'btn btn-sec btn-sm',onClick:loadLatestTournamentFromCloud},'Load'),
+      el('button',{cls:'btn btn-primary btn-sm',onClick:saveTournamentToCloud},'Save'),
+      el('button',{cls:'btn btn-ghost btn-sm',onClick:signOutGoogle},'Logout')
+    )
+  }else{
+    actions.append(el('button',{cls:'btn btn-primary btn-sm',onClick:signInWithGoogle},'Login with Google'))
+  }
+  top.append(left,actions)
+  wrap.appendChild(top)
+  if(S.cloudMessage){
+    wrap.appendChild(el('p',{style:{fontSize:'12px',color:'var(--muted)',marginTop:'10px'}},S.cloudMessage))
+  }
+  if(!canUseGoogleAuth()){
+    wrap.appendChild(el('p',{style:{fontSize:'12px',color:'var(--orange)',marginTop:'10px'}},'Google login only works on localhost or deployed web URL.'))
+  }
+  return wrap
+}
 
 // -- Update Submit Button Realtime --------------------------------------------
 function updateSubmitBtn() {
@@ -408,6 +567,7 @@ function vSetup(){
     if(i<2)sr.appendChild(el('div',{cls:`sline${i<S.step?' sline-done':''}`,style:{minWidth:'24px'}}))
   })
   wrap.appendChild(sr)
+  if(S.step===0)wrap.appendChild(vCloudBar())
 
   const card=el('div',{cls:'card',style:{maxWidth:'480px',width:'100%'}})
 
@@ -576,7 +736,7 @@ function vPlaying(){
     el('button',{cls:'btn btn-sec btn-sm',onClick:()=>{
       if(confirm('Yakin ingin kembali ke awal? Progress turnamen ini akan dibuang.')){
         localStorage.removeItem('padelin_state');
-        S=JSON.parse(JSON.stringify(defaultState));
+        S={...JSON.parse(JSON.stringify(defaultState)),user:S.user};
         render();
       }
     }},svg('cl',14), 'Home'),
@@ -907,7 +1067,7 @@ function vFinished(){
 
   main.appendChild(el('button',{cls:'btn btn-sec btn-lg w-full',onClick:()=>{
     localStorage.removeItem('padelin_state'); // Buang savean lama
-    S=JSON.parse(JSON.stringify(defaultState));
+    S={...JSON.parse(JSON.stringify(defaultState)),user:S.user};
     render()
   }},svg('restart',16),'New Tournament'))
 
@@ -946,6 +1106,7 @@ function submitRound(){
   render()
 }
 
+initFirebase()
 render()
 </script>
 </body>
